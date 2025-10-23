@@ -1,3 +1,4 @@
+import { Icon } from '@iconify/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSubject } from '../contexts/SubjectContext'
 import {
@@ -110,14 +111,9 @@ export function SubjectDisplay() {
         {!currentSubject && (
           <div className="h-full flex items-center justify-center">
             <div className="text-center p-8">
-              <div className="text-6xl mb-4">🧠</div>
-              <h3 className="text-lg font-medium text-gray-800 mb-2">
-                Subject Analysis Ready
-              </h3>
-              <p className="text-sm text-gray-600 max-w-xs">
-                Start speaking and I'll automatically detect subject changes and
-                extract key bullet points.
-              </p>
+              <div className="text-6xl mb-4">
+                <Icon icon="mdi:brain" className="w-12 h-12 text-gray-400" />
+              </div>
             </div>
           </div>
         )}

@@ -310,17 +310,10 @@ export function MainApplication() {
             {/* Left Side - Transcription Cards (50%) */}
             <div className="flex-1">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
-                <div className="p-4 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-800">
-                    Live Transcription
-                  </h2>
-                </div>
-                <div className="h-[calc(100%-5rem)] overflow-y-auto p-4">
-                  <TranscriptionCards
-                    transcriptionCards={appState.transcriptionCards}
-                    isRecording={appState.isRecording}
-                  />
-                </div>
+                <TranscriptionCards
+                  transcriptionCards={appState.transcriptionCards}
+                  isRecording={appState.isRecording}
+                />
               </div>
             </div>
 

@@ -11,9 +11,8 @@ export function TranscriptionCards({
   isRecording,
 }: TranscriptionCardsProps) {
   return (
-    <div className="pt-8 pb-32">
-      {/* Transcription Cards - Newest First */}
-      <div className="space-y-6">
+    <div className="h-full flex flex-col">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {transcriptionCards
           .slice()
           .reverse()
@@ -56,12 +55,14 @@ export function TranscriptionCards({
           ))}
 
         {transcriptionCards.length === 0 && (
-          <div className="text-center py-16">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-              <Icon
-                icon={isRecording ? 'mdi:microphone' : 'mdi:microphone-off'}
-                className={`w-10 h-10 ${isRecording ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`}
-              />
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center p-8">
+              <div className="text-6xl mb-4">
+                <Icon
+                  icon={isRecording ? 'mdi:microphone' : 'mdi:microphone-off'}
+                  className={`w-12 h-12 ${isRecording ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`}
+                />
+              </div>
             </div>
           </div>
         )}

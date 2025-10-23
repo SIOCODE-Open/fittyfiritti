@@ -11,13 +11,8 @@ export function BulletPoint({ bulletPoint }: BulletPointProps) {
   return (
     <div className="mb-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
       <div className="flex items-start gap-3">
-        {bulletPoint.emoji && (
-          <span className="text-2xl flex-shrink-0 mt-1">
-            {bulletPoint.emoji}
-          </span>
-        )}
         <div className="flex-1 min-w-0">
-          <p className="text-gray-800 text-lg leading-relaxed mb-3">
+          <p className="text-gray-800 text-xl leading-relaxed mb-3">
             {bulletPoint.text}
           </p>
           {isTranslating && (
@@ -27,7 +22,7 @@ export function BulletPoint({ bulletPoint }: BulletPointProps) {
             </div>
           )}
           {textJa && (
-            <p className="text-gray-800 text-lg leading-relaxed border-t border-gray-100 pt-3">
+            <p className="text-gray-800 text-xl leading-relaxed border-t border-gray-100 pt-3">
               {textJa}
             </p>
           )}
