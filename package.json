@@ -1,0 +1,44 @@
+{
+  "name": "diai",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.12.3",
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "format": "turbo format",
+    "type-check": "turbo type-check",
+    "test": "turbo test",
+    "test:ui": "turbo test:ui",
+    "test:headed": "turbo test:headed",
+    "test:install": "turbo test:install",
+    "clean": "turbo clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "@types/node": "^22.8.6",
+    "typescript": "^5.6.3",
+    "eslint": "^9.14.0",
+    "prettier": "^3.3.3",
+    "@eslint/js": "^9.14.0",
+    "typescript-eslint": "^8.12.2",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.13",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "vite": "^5.4.10",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^4.0.0-alpha.31",
+    "@tailwindcss/vite": "^4.0.0-alpha.31",
+    "@playwright/test": "^1.48.2",
+    "@ricky0123/vad-react": "0.0.34"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

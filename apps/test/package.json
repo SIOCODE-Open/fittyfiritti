@@ -1,0 +1,22 @@
+{
+  "name": "@diai/test",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "show-report": "playwright show-report",
+    "install-deps": "playwright install"
+  },
+  "dependencies": {
+    "@diai/built-in-ai-api": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "*",
+    "@types/node": "*",
+    "typescript": "*"
+  }
+}
