@@ -1,16 +1,14 @@
+import { Icon } from '@iconify/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useAudioCapture } from '../contexts/AudioCaptureContext'
 import { useTranscription } from '../contexts/TranscriptionContext'
 import { useTranslation } from '../contexts/TranslationContext'
+import { useVAD } from '../contexts/VADContext'
 import { AppState, AudioChunk, TranscriptionCard } from '../types'
-import { ControlPanel } from './ControlPanel'
-import { TranscriptionDisplay } from './TranscriptionDisplay'
-import { WaveformDisplay } from './WaveformDisplay'
 
 export function MainApplication() {
-  const audioService = useAudioCapture()
   const transcriptionService = useTranscription()
   const translationService = useTranslation()
+  const vad = useVAD()
 
   const [appState, setAppState] = useState<AppState>({
     isRecording: false,
@@ -21,6 +19,7 @@ export function MainApplication() {
 
   const [isInitializing, setIsInitializing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [hasStartedRecording, setHasStartedRecording] = useState(false)
   const currentLoadingCardId = useRef<string | null>(null)
 
   // Generate unique IDs
@@ -28,6 +27,49 @@ export function MainApplication() {
     () => Math.random().toString(36).substr(2, 9),
     []
   )
+
+  // Convert Float32Array to Blob for transcription
+  const convertAudioToBlob = useCallback((audioData: Float32Array): Blob => {
+    // Convert Float32Array to WAV format
+    const length = audioData.length
+    const buffer = new ArrayBuffer(44 + length * 2)
+    const view = new DataView(buffer)
+
+    // WAV header
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i))
+      }
+    }
+
+    const sampleRate = 16000 // VAD uses 16kHz
+    const numChannels = 1
+    const bitsPerSample = 16
+
+    writeString(0, 'RIFF')
+    view.setUint32(4, 36 + length * 2, true)
+    writeString(8, 'WAVE')
+    writeString(12, 'fmt ')
+    view.setUint32(16, 16, true)
+    view.setUint16(20, 1, true)
+    view.setUint16(22, numChannels, true)
+    view.setUint32(24, sampleRate, true)
+    view.setUint32(28, (sampleRate * numChannels * bitsPerSample) / 8, true)
+    view.setUint16(32, (numChannels * bitsPerSample) / 8, true)
+    view.setUint16(34, bitsPerSample, true)
+    writeString(36, 'data')
+    view.setUint32(40, length * 2, true)
+
+    // Convert float32 samples to int16
+    let offset = 44
+    for (let i = 0; i < length; i++) {
+      const sample = Math.max(-1, Math.min(1, audioData[i] || 0))
+      view.setInt16(offset, sample * 0x7fff, true)
+      offset += 2
+    }
+
+    return new Blob([buffer], { type: 'audio/wav' })
+  }, [])
 
   // Async translation helper
   const translateTextAsync = useCallback(
@@ -63,14 +105,6 @@ export function MainApplication() {
     },
     [translationService]
   )
-
-  // Handle live waveform data updates
-  const handleWaveformData = useCallback((waveformData: number[]) => {
-    setAppState(prev => ({
-      ...prev,
-      liveWaveformData: waveformData,
-    }))
-  }, [])
 
   const handleAudioChunk = useCallback(
     async (chunk: AudioChunk) => {
@@ -126,7 +160,57 @@ export function MainApplication() {
     [transcriptionService, translateTextAsync]
   )
 
-  // Start recording
+  // Handle VAD speech detection
+  const handleSpeechEnd = useCallback(
+    async (audioData: Float32Array) => {
+      try {
+        console.log('🗣️ Processing speech end, audio length:', audioData.length)
+
+        // Create a loading card immediately
+        const cardId = generateId()
+        const newCard: TranscriptionCard = {
+          id: cardId,
+          timestamp: Date.now(),
+          isTranscribing: true,
+          waveformData: [], // We'll update this with actual waveform if needed
+        }
+
+        // Store the card ID for the audio processing
+        currentLoadingCardId.current = cardId
+
+        setAppState(prev => ({
+          ...prev,
+          transcriptionCards: [...prev.transcriptionCards, newCard],
+        }))
+
+        // Convert VAD audio to blob
+        const audioBlob = convertAudioToBlob(audioData)
+
+        // Create audio chunk compatible with existing system
+        const audioChunk: AudioChunk = {
+          blob: audioBlob,
+          timestamp: Date.now(),
+          windowStart: Date.now() - (audioData.length / 16000) * 1000, // Estimate start time
+          windowEnd: Date.now(),
+          waveformData: [], // Could convert audioData to waveform if needed
+        }
+
+        // Process the audio chunk
+        await handleAudioChunk(audioChunk)
+      } catch (error) {
+        console.error('Failed to process VAD speech:', error)
+        setError('Failed to process speech. Please try again.')
+      }
+    },
+    [generateId, convertAudioToBlob, handleAudioChunk]
+  )
+
+  const handleSpeechStart = useCallback(() => {
+    console.log('🗣️ Speech started')
+    // Could add visual feedback here
+  }, [])
+
+  // Start recording with VAD
   const handleStartRecording = async () => {
     try {
       setIsInitializing(true)
@@ -138,17 +222,18 @@ export function MainApplication() {
         translationService.initialize(),
       ])
 
-      // Set up audio chunk handler
-      audioService.onAudioChunk(handleAudioChunk)
-      audioService.onWaveformData(handleWaveformData)
+      // Set up VAD callbacks
+      vad.onSpeechEnd(handleSpeechEnd)
+      vad.onSpeechStart(handleSpeechStart)
 
-      // Start audio capture
-      await audioService.startCapture()
+      // Start VAD listening
+      vad.start()
 
       setAppState(prev => ({ ...prev, isRecording: true }))
+      setHasStartedRecording(true) // Mark that recording has been started at least once
       setIsInitializing(false)
 
-      console.log('🎙️ Recording started successfully')
+      console.log('🎙️ VAD recording started successfully')
     } catch (error) {
       console.error('Failed to start recording:', error)
       setError(
@@ -161,7 +246,8 @@ export function MainApplication() {
   // Handle stopping recording
   const handleStopRecording = () => {
     try {
-      audioService.stopCapture()
+      // Stop VAD listening
+      vad.pause()
 
       setAppState(prev => ({
         ...prev,
@@ -169,211 +255,186 @@ export function MainApplication() {
         currentTranscription: '',
       }))
 
-      console.log('🛑 Recording stopped')
+      console.log('🛑 VAD recording stopped')
     } catch (error) {
       console.error('Failed to stop recording:', error)
       setError('Failed to stop recording.')
     }
   }
 
-  // Handle segment completion (manual trigger)
-  const handleCompleteSegment = useCallback(() => {
-    if (appState.isRecording) {
-      // Create a loading card immediately
-      const cardId = generateId()
-      const newCard: TranscriptionCard = {
-        id: cardId,
-        timestamp: Date.now(),
-        isTranscribing: true,
-        waveformData: [...appState.liveWaveformData], // Copy current waveform data
-      }
-
-      // Store the card ID for the audio processing
-      currentLoadingCardId.current = cardId
-
-      setAppState(prev => ({
-        ...prev,
-        transcriptionCards: [...prev.transcriptionCards, newCard],
-        liveWaveformData: [], // Reset live waveform for next segment
-      }))
-
-      // Trigger the audio service to complete the segment
-      audioService.completeSegment()
-    }
-  }, [
-    appState.isRecording,
-    appState.liveWaveformData,
-    audioService,
-    generateId,
-  ])
-
-  // Space key listener for segment completion
-  useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.code === 'Space' && appState.isRecording) {
-        event.preventDefault()
-        handleCompleteSegment()
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyPress)
-    return () => document.removeEventListener('keydown', handleKeyPress)
-  }, [appState.isRecording, handleCompleteSegment])
-
-  // Cleanup services on unmount
+  // Cleanup services on unmount only
   useEffect(() => {
     return () => {
-      audioService.stopCapture()
-      transcriptionService.destroy()
-      translationService.destroy()
+      // Capture current values at cleanup time to avoid stale closures
+      const currentVad = vad
+      const currentTranscriptionService = transcriptionService
+      const currentTranslationService = translationService
+
+      currentVad.pause()
+      currentTranscriptionService.destroy()
+      currentTranslationService.destroy()
     }
-  }, [audioService, transcriptionService, translationService])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run on mount/unmount
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">DiAI</h1>
-        <p className="text-gray-600">
-          Real-time AI Transcription & Note-Taking
-        </p>
-      </div>
-
+    <div className="min-h-screen bg-gray-50">
       {/* Error Display */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+        <div className="fixed top-4 left-4 right-4 z-50 bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center">
-            <svg
+            <Icon
+              icon="mdi:alert-circle"
               className="w-5 h-5 text-red-600 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
+            />
             <p className="text-red-700">{error}</p>
           </div>
         </div>
       )}
 
-      {/* Control Panel */}
-      <ControlPanel
-        isRecording={appState.isRecording}
-        onStartRecording={handleStartRecording}
-        onStopRecording={handleStopRecording}
-        onCompleteSegment={handleCompleteSegment}
-        isInitializing={isInitializing}
-      />
-
-      {/* Live Transcription */}
-      <TranscriptionDisplay
-        currentTranscription={appState.currentTranscription}
-        isRecording={appState.isRecording}
-        liveWaveformData={appState.liveWaveformData}
-      />
-
-      {/* Transcription Cards */}
-      <div className="space-y-4">
-        {appState.transcriptionCards.map(card => (
-          <div
-            key={card.id}
-            className="bg-white rounded-lg p-6 shadow-sm border border-gray-200"
-          >
-            {/* Waveform for this card */}
-            {card.waveformData && card.waveformData.length > 0 && (
-              <div className="mb-4">
-                <WaveformDisplay
-                  waveformData={card.waveformData}
-                  width={400}
-                  height={50}
-                  isLive={false}
-                  className="w-full flex justify-center"
-                />
-              </div>
-            )}
-
-            {/* Transcription content */}
-            {card.isTranscribing && (
-              <div className="text-blue-600 flex items-center gap-2 mb-3">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
-                <span>Transcribing audio...</span>
-              </div>
-            )}
-
-            {card.text && (
-              <div className="text-gray-900 mb-3 leading-relaxed">
-                {card.text}
-              </div>
-            )}
-
-            {/* Translation section */}
-            {card.isTranslating && (
-              <div className="text-sm text-blue-600 flex items-center gap-2">
-                <div className="animate-spin rounded-full h-3 w-3 border border-blue-600 border-t-transparent"></div>
-                Translating...
-              </div>
-            )}
-            {card.textJa && !card.isTranslating && (
-              <div className="text-gray-600 text-sm pt-3 border-t border-gray-100">
-                <span className="font-medium text-gray-700">日本語:</span>{' '}
-                {card.textJa}
-              </div>
-            )}
-            <div className="text-xs text-gray-400 mt-3">
-              {new Date(card.timestamp).toLocaleTimeString()}
+      {/* Main Content Container */}
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* When not recording AND never started recording: Show huge record button in center */}
+        {!appState.isRecording && !hasStartedRecording && (
+          <div className="flex flex-col items-center justify-center min-h-screen">
+            <div className="text-center mb-12">
+              <h1 className="text-6xl font-bold text-gray-900 mb-4">DiAI</h1>
+              <p className="text-xl text-gray-600">
+                Real-time AI Transcription & Note-Taking
+              </p>
             </div>
-          </div>
-        ))}
 
-        {appState.transcriptionCards.length === 0 && !appState.isRecording && (
-          <div className="bg-white rounded-lg p-12 text-center shadow-sm">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="w-8 h-8 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+            <button
+              onClick={handleStartRecording}
+              disabled={isInitializing}
+              className="w-32 h-32 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-full transition-all duration-200 shadow-2xl hover:shadow-3xl hover:scale-105 flex items-center justify-center group"
+            >
+              {isInitializing ? (
+                <Icon icon="mdi:loading" className="w-12 h-12 animate-spin" />
+              ) : (
+                <Icon
+                  icon="mdi:microphone"
+                  className="w-16 h-16 group-hover:scale-110 transition-transform"
                 />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Ready to Start
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Click "Start Recording" to begin transcribing your speech. Press{' '}
-              <kbd className="px-2 py-1 bg-gray-100 rounded text-sm">Space</kbd>{' '}
-              to complete a segment.
-            </p>
+              )}
+            </button>
           </div>
         )}
 
-        {appState.isRecording && (
-          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-              <span className="text-blue-800 font-medium">Recording...</span>
-              <span className="text-blue-600 text-sm">
-                Press{' '}
-                <kbd className="px-1 py-0.5 bg-white rounded text-xs">
-                  Space
-                </kbd>{' '}
-                to complete segment
-              </span>
+        {/* When recording OR has started recording: Show messages layout */}
+        {(appState.isRecording || hasStartedRecording) && (
+          <div className="pt-8 pb-32">
+            {/* Transcription Cards - Newest First */}
+            <div className="space-y-6">
+              {appState.transcriptionCards
+                .slice()
+                .reverse()
+                .map(card => (
+                  <div
+                    key={card.id}
+                    className="bg-white rounded-xl p-8 shadow-lg border border-gray-200"
+                  >
+                    {/* Transcription content */}
+                    {card.isTranscribing && (
+                      <div className="text-blue-600 flex items-center gap-3 mb-6">
+                        <Icon
+                          icon="mdi:microphone"
+                          className="w-12 h-12 animate-pulse"
+                        />
+                      </div>
+                    )}
+
+                    {card.text && (
+                      <div className="text-gray-900 mb-6 text-2xl leading-relaxed font-medium">
+                        {card.text}
+                      </div>
+                    )}
+
+                    {/* Translation section */}
+                    {card.isTranslating && (
+                      <div className="text-green-600 flex items-center gap-3">
+                        <Icon
+                          icon="mdi:translate"
+                          className="w-12 h-12 animate-pulse"
+                        />
+                      </div>
+                    )}
+                    {card.textJa && !card.isTranslating && (
+                      <div className="text-green-700 text-2xl pt-4 border-t border-gray-200 leading-relaxed">
+                        {card.textJa}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+              {appState.transcriptionCards.length === 0 && (
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
+                    <Icon
+                      icon={
+                        appState.isRecording
+                          ? 'mdi:microphone'
+                          : 'mdi:microphone-off'
+                      }
+                      className={`w-10 h-10 ${appState.isRecording ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
       </div>
+
+      {/* Floating Panel at Bottom - Shows when recording has been started */}
+      {hasStartedRecording && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-50">
+          <div className="container mx-auto px-4 py-6 max-w-4xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                {appState.isRecording ? (
+                  <>
+                    <Icon
+                      icon="mdi:microphone"
+                      className="w-8 h-8 text-red-500 animate-pulse"
+                    />
+                    <Icon
+                      icon="mdi:account-voice"
+                      className={`w-6 h-6 ${vad.userSpeaking ? 'text-green-500' : 'text-gray-400'}`}
+                    />
+                  </>
+                ) : (
+                  <Icon
+                    icon="mdi:microphone-off"
+                    className="w-8 h-8 text-gray-400"
+                  />
+                )}
+              </div>
+
+              {appState.isRecording ? (
+                <button
+                  onClick={handleStopRecording}
+                  className="bg-red-600 hover:bg-red-700 text-white p-4 rounded-full transition-colors shadow-lg hover:shadow-xl"
+                >
+                  <Icon icon="mdi:stop" className="w-6 h-6" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleStartRecording}
+                  disabled={isInitializing}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white p-4 rounded-full transition-colors shadow-lg hover:shadow-xl"
+                >
+                  {isInitializing ? (
+                    <Icon icon="mdi:loading" className="w-6 h-6 animate-spin" />
+                  ) : (
+                    <Icon icon="mdi:play" className="w-6 h-6" />
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

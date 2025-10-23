@@ -13,21 +13,21 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@diai/built-in-ai-api": "workspace:*",
     "react": "*",
     "react-dom": "*",
-    "@ricky0123/vad-react": "*",
-    "@diai/built-in-ai-api": "workspace:*"
+    "@iconify/react": "6.0.2"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "*",
     "@types/react": "*",
     "@types/react-dom": "*",
     "@vitejs/plugin-react": "*",
-    "vite": "*",
-    "typescript": "*",
     "eslint": "*",
     "prettier": "*",
     "prettier-plugin-organize-imports": "*",
     "tailwindcss": "*",
-    "@tailwindcss/vite": "*"
+    "typescript": "*",
+    "vite": "*"
   }
 }

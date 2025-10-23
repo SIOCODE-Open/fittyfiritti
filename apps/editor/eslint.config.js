@@ -7,7 +7,11 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/node_modules/**'],
+    ignores: [
+      '**/dist/**', 
+      '**/node_modules/**',
+      '**/public/**/*.{js,mjs,wasm,onnx}', // Ignore VAD assets in public directory
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

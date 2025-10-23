@@ -18,6 +18,7 @@ type AIProviderState =
   | 'downloadable'
   | 'downloading'
   | 'loading-model'
+  | 'loading-vad'
   | 'ready'
 
 interface AIAvailabilityContextType {
@@ -43,6 +44,40 @@ export function AIAvailabilityProvider({
   const [error, setError] = useState<string | null>(null)
   const [downloadProgress, setDownloadProgress] = useState(0)
 
+  const preloadVAD = useCallback(async () => {
+    try {
+      console.log('Checking VAD availability...')
+
+      // Wait for VAD to be available from CDN but don't create an instance
+      const waitForVAD = () => {
+        return new Promise<void>((resolve, reject) => {
+          const maxAttempts = 50 // 5 seconds max wait
+          let attempts = 0
+
+          const checkVAD = () => {
+            attempts++
+            if (window.VAD && window.VAD.MicVAD) {
+              resolve()
+            } else if (attempts >= maxAttempts) {
+              reject(new Error('VAD library failed to load from CDN'))
+            } else {
+              setTimeout(checkVAD, 100)
+            }
+          }
+
+          checkVAD()
+        })
+      }
+
+      await waitForVAD()
+      console.log('VAD is available from CDN!')
+    } catch (err) {
+      console.error('Failed to check VAD availability:', err)
+      // Don't fail completely if VAD check fails, just warn
+      console.warn('VAD check failed, but continuing anyway')
+    }
+  }, [])
+
   const testModelCreation = useCallback(async () => {
     try {
       console.log('Testing AI model creation...')
@@ -51,6 +86,7 @@ export function AIAvailabilityProvider({
       const session = await createLanguageModelSession({
         temperature: 0.5,
         topK: 3,
+        expectedOutputs: [{ type: 'text', languages: ['en'] }],
         initialPrompts: [
           {
             role: 'system',
@@ -66,6 +102,11 @@ export function AIAvailabilityProvider({
       session.destroy()
 
       console.log('AI model is ready!')
+
+      // Now check VAD availability
+      setState('loading-vad')
+      await preloadVAD()
+
       setState('ready')
     } catch (err) {
       console.error('Failed to create AI model session:', err)
@@ -74,7 +115,7 @@ export function AIAvailabilityProvider({
         'Failed to initialize AI model. The AI may not be fully ready yet.'
       )
     }
-  }, [])
+  }, [preloadVAD])
 
   const checkAvailability = useCallback(async () => {
     try {
@@ -144,6 +185,7 @@ export function AIAvailabilityProvider({
         },
         temperature: 0.5,
         topK: 3,
+        expectedOutputs: [{ type: 'text', languages: ['en'] }],
       })
 
       // If we reach here, download was successful
@@ -320,6 +362,18 @@ export function AIAvailabilityProvider({
         <div className="bg-white rounded-xl p-8 shadow-lg text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Initializing AI model...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Loading VAD state
+  if (state === 'loading-vad') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading voice detection...</p>
         </div>
       </div>
     )
