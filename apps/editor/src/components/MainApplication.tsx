@@ -1,9 +1,12 @@
-import { Icon } from '@iconify/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranscription } from '../contexts/TranscriptionContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useVAD } from '../contexts/VADContext'
 import { AppState, AudioChunk, TranscriptionCard } from '../types'
+import { ErrorDisplay } from './ErrorDisplay'
+import { RecordingControlPanel } from './RecordingControlPanel'
+import { TranscriptionCards } from './TranscriptionCards'
+import { WelcomeScreen } from './WelcomeScreen'
 
 export function MainApplication() {
   const transcriptionService = useTranscription()
@@ -279,161 +282,36 @@ export function MainApplication() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Error Display */}
-      {error && (
-        <div className="fixed top-4 left-4 right-4 z-50 bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <Icon
-              icon="mdi:alert-circle"
-              className="w-5 h-5 text-red-600 mr-2"
-            />
-            <p className="text-red-700">{error}</p>
-          </div>
-        </div>
-      )}
+      <ErrorDisplay error={error} />
 
       {/* Main Content Container */}
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* When not recording AND never started recording: Show huge record button in center */}
         {!appState.isRecording && !hasStartedRecording && (
-          <div className="flex flex-col items-center justify-center min-h-screen">
-            <div className="text-center mb-12">
-              <h1 className="text-6xl font-bold text-gray-900 mb-4">DiAI</h1>
-              <p className="text-xl text-gray-600">
-                Real-time AI Transcription & Note-Taking
-              </p>
-            </div>
-
-            <button
-              onClick={handleStartRecording}
-              disabled={isInitializing}
-              className="w-32 h-32 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-full transition-all duration-200 shadow-2xl hover:shadow-3xl hover:scale-105 flex items-center justify-center group"
-            >
-              {isInitializing ? (
-                <Icon icon="mdi:loading" className="w-12 h-12 animate-spin" />
-              ) : (
-                <Icon
-                  icon="mdi:microphone"
-                  className="w-16 h-16 group-hover:scale-110 transition-transform"
-                />
-              )}
-            </button>
-          </div>
+          <WelcomeScreen
+            onStartRecording={handleStartRecording}
+            isInitializing={isInitializing}
+          />
         )}
 
         {/* When recording OR has started recording: Show messages layout */}
         {(appState.isRecording || hasStartedRecording) && (
-          <div className="pt-8 pb-32">
-            {/* Transcription Cards - Newest First */}
-            <div className="space-y-6">
-              {appState.transcriptionCards
-                .slice()
-                .reverse()
-                .map(card => (
-                  <div
-                    key={card.id}
-                    className="bg-white rounded-xl p-8 shadow-lg border border-gray-200"
-                  >
-                    {/* Transcription content */}
-                    {card.isTranscribing && (
-                      <div className="text-blue-600 flex items-center gap-3 mb-6">
-                        <Icon
-                          icon="mdi:microphone"
-                          className="w-12 h-12 animate-pulse"
-                        />
-                      </div>
-                    )}
-
-                    {card.text && (
-                      <div className="text-gray-900 mb-6 text-2xl leading-relaxed font-medium">
-                        {card.text}
-                      </div>
-                    )}
-
-                    {/* Translation section */}
-                    {card.isTranslating && (
-                      <div className="text-green-600 flex items-center gap-3">
-                        <Icon
-                          icon="mdi:translate"
-                          className="w-12 h-12 animate-pulse"
-                        />
-                      </div>
-                    )}
-                    {card.textJa && !card.isTranslating && (
-                      <div className="text-green-700 text-2xl pt-4 border-t border-gray-200 leading-relaxed">
-                        {card.textJa}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-              {appState.transcriptionCards.length === 0 && (
-                <div className="text-center py-16">
-                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-                    <Icon
-                      icon={
-                        appState.isRecording
-                          ? 'mdi:microphone'
-                          : 'mdi:microphone-off'
-                      }
-                      className={`w-10 h-10 ${appState.isRecording ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <TranscriptionCards
+            transcriptionCards={appState.transcriptionCards}
+            isRecording={appState.isRecording}
+          />
         )}
       </div>
 
       {/* Floating Panel at Bottom - Shows when recording has been started */}
       {hasStartedRecording && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-50">
-          <div className="container mx-auto px-4 py-6 max-w-4xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                {appState.isRecording ? (
-                  <>
-                    <Icon
-                      icon="mdi:microphone"
-                      className="w-8 h-8 text-red-500 animate-pulse"
-                    />
-                    <Icon
-                      icon="mdi:account-voice"
-                      className={`w-6 h-6 ${vad.userSpeaking ? 'text-green-500' : 'text-gray-400'}`}
-                    />
-                  </>
-                ) : (
-                  <Icon
-                    icon="mdi:microphone-off"
-                    className="w-8 h-8 text-gray-400"
-                  />
-                )}
-              </div>
-
-              {appState.isRecording ? (
-                <button
-                  onClick={handleStopRecording}
-                  className="bg-red-600 hover:bg-red-700 text-white p-4 rounded-full transition-colors shadow-lg hover:shadow-xl"
-                >
-                  <Icon icon="mdi:stop" className="w-6 h-6" />
-                </button>
-              ) : (
-                <button
-                  onClick={handleStartRecording}
-                  disabled={isInitializing}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white p-4 rounded-full transition-colors shadow-lg hover:shadow-xl"
-                >
-                  {isInitializing ? (
-                    <Icon icon="mdi:loading" className="w-6 h-6 animate-spin" />
-                  ) : (
-                    <Icon icon="mdi:play" className="w-6 h-6" />
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+        <RecordingControlPanel
+          isRecording={appState.isRecording}
+          onStartRecording={handleStartRecording}
+          onStopRecording={handleStopRecording}
+          isInitializing={isInitializing}
+          userSpeaking={vad.userSpeaking}
+        />
       )}
     </div>
   )
