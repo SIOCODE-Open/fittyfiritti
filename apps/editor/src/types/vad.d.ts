@@ -2,8 +2,8 @@
 
 declare global {
   interface Window {
-    VAD: any
-    vad: any
+    VAD: typeof VAD
+    vad: VAD.MicVADInstance
   }
 
   // Define the VAD interfaces based on the library documentation

@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranscription } from '../contexts/TranscriptionContext'
+import { useTranscriptionEvents } from '../contexts/TranscriptionEventsContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useVAD } from '../contexts/VADContext'
 import { AppState, AudioChunk, TranscriptionCard } from '../types'
 import { ErrorDisplay } from './ErrorDisplay'
 import { RecordingControlPanel } from './RecordingControlPanel'
+import { SubjectDisplay } from './SubjectDisplay'
 import { TranscriptionCards } from './TranscriptionCards'
 import { WelcomeScreen } from './WelcomeScreen'
 
 export function MainApplication() {
   const transcriptionService = useTranscription()
   const translationService = useTranslation()
+  const { publishTranscription } = useTranscriptionEvents()
   const vad = useVAD()
 
   const [appState, setAppState] = useState<AppState>({
@@ -155,12 +158,19 @@ export function MainApplication() {
 
         // Start async translation
         translateTextAsync(loadingCardId, transcription)
+
+        // Publish completed transcription for subject analysis
+        publishTranscription({
+          id: loadingCardId,
+          text: transcription,
+          timestamp: Date.now(),
+        })
       } catch (error) {
         console.error('Failed to process audio chunk:', error)
         setError('Failed to process audio. Please try again.')
       }
     },
-    [transcriptionService, translateTextAsync]
+    [transcriptionService, translateTextAsync, publishTranscription]
   )
 
   // Handle VAD speech detection
@@ -285,7 +295,7 @@ export function MainApplication() {
       <ErrorDisplay error={error} />
 
       {/* Main Content Container */}
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="w-full px-6 py-8">
         {/* When not recording AND never started recording: Show huge record button in center */}
         {!appState.isRecording && !hasStartedRecording && (
           <WelcomeScreen
@@ -294,12 +304,33 @@ export function MainApplication() {
           />
         )}
 
-        {/* When recording OR has started recording: Show messages layout */}
+        {/* When recording OR has started recording: Show split layout */}
         {(appState.isRecording || hasStartedRecording) && (
-          <TranscriptionCards
-            transcriptionCards={appState.transcriptionCards}
-            isRecording={appState.isRecording}
-          />
+          <div className="flex gap-6 h-[calc(100vh-12rem)]">
+            {/* Left Side - Transcription Cards (50%) */}
+            <div className="flex-1">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
+                <div className="p-4 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-800">
+                    Live Transcription
+                  </h2>
+                </div>
+                <div className="h-[calc(100%-5rem)] overflow-y-auto p-4">
+                  <TranscriptionCards
+                    transcriptionCards={appState.transcriptionCards}
+                    isRecording={appState.isRecording}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side - Subject Analysis (50%) */}
+            <div className="flex-1">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
+                <SubjectDisplay />
+              </div>
+            </div>
+          </div>
         )}
       </div>
 

@@ -128,9 +128,9 @@ export function VADProvider({ children }: VADProviderProps) {
 
         console.log('🎧 VAD instance created, checking properties...')
         console.log('VAD instance:', {
-          listening: (vad as any).listening,
-          loading: (vad as any).loading,
-          errored: (vad as any).errored,
+          listening: (vad as VAD.MicVADInstance).listening,
+          loading: (vad as VAD.MicVADInstance).loading,
+          errored: (vad as VAD.MicVADInstance).errored,
         })
 
         if (!isMounted) {
