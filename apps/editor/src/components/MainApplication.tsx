@@ -15,9 +15,8 @@ import {
 import { ErrorDisplay } from './ErrorDisplay'
 import { RecordingControlPanel } from './RecordingControlPanel'
 import { SubjectDisplay } from './SubjectDisplay'
-import { SystemTranscriptionCards } from './SystemTranscriptionCards'
-import { TranscriptionCards } from './TranscriptionCards'
-import { WelcomeScreen } from './WelcomeScreen'
+import { UnifiedTranscriptionStream } from './UnifiedTranscriptionStream'
+import { Language, WelcomeScreen } from './WelcomeScreen'
 
 export function MainApplication() {
   const transcriptionService = useTranscription()
@@ -40,6 +39,9 @@ export function MainApplication() {
   const [isInitializing, setIsInitializing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasStartedRecording, setHasStartedRecording] = useState(false)
+  const [speakerLanguage, setSpeakerLanguage] = useState<Language>('english')
+  const [otherPartyLanguage, setOtherPartyLanguage] =
+    useState<Language>('japanese')
   const currentLoadingCardId = useRef<string | null>(null)
   const currentSystemLoadingCardId = useRef<string | null>(null)
 
@@ -95,6 +97,11 @@ export function MainApplication() {
   // Async translation helper with job deduplication
   const translateTextAsync = useCallback(
     (cardId: string, text: string) => {
+      // Only translate if languages differ
+      if (speakerLanguage === otherPartyLanguage) {
+        return
+      }
+
       setAppState(prev => ({
         ...prev,
         transcriptionCards: prev.transcriptionCards.map(card =>
@@ -124,12 +131,17 @@ export function MainApplication() {
           }))
         })
     },
-    [translationService]
+    [translationService, speakerLanguage, otherPartyLanguage]
   )
 
   // System translation helper (Japanese to English)
   const translateSystemTextAsync = useCallback(
     (cardId: string, text: string) => {
+      // Only translate if languages differ
+      if (speakerLanguage === otherPartyLanguage) {
+        return
+      }
+
       setAppState(prev => ({
         ...prev,
         systemTranscriptionCards: prev.systemTranscriptionCards.map(card =>
@@ -159,7 +171,7 @@ export function MainApplication() {
           }))
         })
     },
-    [systemTranslationService]
+    [systemTranslationService, speakerLanguage, otherPartyLanguage]
   )
 
   const handleAudioChunk = useCallback(
@@ -199,15 +211,17 @@ export function MainApplication() {
                   ...card,
                   text: transcription,
                   isTranscribing: false,
-                  isTranslating: true,
+                  isTranslating: speakerLanguage !== otherPartyLanguage,
                   waveformData: chunk.waveformData || card.waveformData,
                 }
               : card
           ),
         }))
 
-        // Start async translation
-        translateTextAsync(loadingCardId, transcription)
+        // Start async translation only if languages differ
+        if (speakerLanguage !== otherPartyLanguage) {
+          translateTextAsync(loadingCardId, transcription)
+        }
 
         // Publish completed transcription for subject analysis
         publishTranscription({
@@ -220,7 +234,13 @@ export function MainApplication() {
         setError('Failed to process audio. Please try again.')
       }
     },
-    [transcriptionService, translateTextAsync, publishTranscription]
+    [
+      transcriptionService,
+      translateTextAsync,
+      publishTranscription,
+      speakerLanguage,
+      otherPartyLanguage,
+    ]
   )
 
   // Handle system audio chunks (Japanese transcription)
@@ -263,21 +283,28 @@ export function MainApplication() {
                   ...card,
                   text: transcription,
                   isTranscribing: false,
-                  isTranslating: true,
+                  isTranslating: speakerLanguage !== otherPartyLanguage,
                   waveformData: chunk.waveformData || card.waveformData,
                 }
               : card
           ),
         }))
 
-        // Start async translation to English
-        translateSystemTextAsync(loadingCardId, transcription)
+        // Start async translation to English only if languages differ
+        if (speakerLanguage !== otherPartyLanguage) {
+          translateSystemTextAsync(loadingCardId, transcription)
+        }
       } catch (error) {
         console.error('Failed to process system audio chunk:', error)
         setError('Failed to process system audio. Please try again.')
       }
     },
-    [systemTranscriptionService, translateSystemTextAsync]
+    [
+      systemTranscriptionService,
+      translateSystemTextAsync,
+      speakerLanguage,
+      otherPartyLanguage,
+    ]
   )
 
   // Handle VAD speech detection
@@ -364,10 +391,17 @@ export function MainApplication() {
   }, [])
 
   // Start recording with VAD
-  const handleStartRecording = async () => {
+  const handleStartRecording = async (
+    selectedSpeakerLanguage: Language,
+    selectedOtherPartyLanguage: Language
+  ) => {
     try {
       setIsInitializing(true)
       setError(null)
+
+      // Set the languages
+      setSpeakerLanguage(selectedSpeakerLanguage)
+      setOtherPartyLanguage(selectedOtherPartyLanguage)
 
       // Initialize services
       await Promise.all([
@@ -464,6 +498,11 @@ export function MainApplication() {
     }
   }
 
+  // Wrapper for recording control panel (no language params needed)
+  const handleStartRecordingWrapper = async () => {
+    return handleStartRecording(speakerLanguage, otherPartyLanguage)
+  }
+
   // Cleanup services on unmount only
   useEffect(() => {
     return () => {
@@ -501,27 +540,21 @@ export function MainApplication() {
             />
           )}
 
-        {/* When recording OR has started recording OR system capturing: Show three-column layout */}
+        {/* When recording OR has started recording OR system capturing: Show two-column layout */}
         {(appState.isRecording ||
           hasStartedRecording ||
           appState.isSystemCapturing) && (
           <div className="flex gap-6 h-[calc(100vh-12rem)]">
-            {/* Left Side - System Audio Transcription Cards (33%) */}
-            <div className="flex-1">
+            {/* Left Side - Unified Transcription Stream (67%) */}
+            <div className="flex-[2]">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
-                <SystemTranscriptionCards
-                  systemTranscriptionCards={appState.systemTranscriptionCards}
-                  isCapturing={appState.isSystemCapturing}
-                />
-              </div>
-            </div>
-
-            {/* Center - Microphone Transcription Cards (33%) */}
-            <div className="flex-1">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
-                <TranscriptionCards
+                <UnifiedTranscriptionStream
                   transcriptionCards={appState.transcriptionCards}
+                  systemTranscriptionCards={appState.systemTranscriptionCards}
                   isRecording={appState.isRecording}
+                  isCapturing={appState.isSystemCapturing}
+                  speakerLanguage={speakerLanguage}
+                  otherPartyLanguage={otherPartyLanguage}
                 />
               </div>
             </div>
@@ -541,7 +574,7 @@ export function MainApplication() {
         <RecordingControlPanel
           isRecording={appState.isRecording}
           isSystemCapturing={appState.isSystemCapturing}
-          onStartRecording={handleStartRecording}
+          onStartRecording={handleStartRecordingWrapper}
           onStopRecording={handleStopRecording}
           onStartSystemCapture={handleStartSystemCapture}
           onStopSystemCapture={handleStopSystemCapture}
