@@ -5,15 +5,19 @@ import {
 } from '@diai/built-in-ai-api'
 import { TranslationService } from '../types'
 
+interface TranslationJob {
+  text: string
+  resolve: (translation: string) => void
+  reject: (error: Error) => void
+  jobId: string
+}
+
 export class TranslationServiceImpl implements TranslationService {
   private session?: LanguageModelSession
   private abortController?: AbortController
-  private translationQueue: Array<{
-    text: string
-    resolve: (translation: string) => void
-    reject: (error: Error) => void
-  }> = []
+  private translationQueue: Array<TranslationJob> = []
   private isProcessing = false
+  private activeJobs = new Map<string, Promise<string>>() // Track ongoing jobs by text
 
   async initialize(): Promise<void> {
     try {
@@ -53,15 +57,42 @@ Guidelines:
       throw new Error('Translation service not initialized')
     }
 
-    return new Promise((resolve, reject) => {
+    if (!text.trim()) {
+      return ''
+    }
+
+    // Check if this exact text is already being translated
+    const existingJob = this.activeJobs.get(text)
+    if (existingJob) {
+      console.log(
+        '🔄 Reusing existing translation job for:',
+        text.substring(0, 30) + '...'
+      )
+      return existingJob
+    }
+
+    // Create a new translation promise and track it
+    const translationPromise = new Promise<string>((resolve, reject) => {
+      const jobId = Math.random().toString(36).substr(2, 9)
+
       // Add to queue
-      this.translationQueue.push({ text, resolve, reject })
+      this.translationQueue.push({ text, resolve, reject, jobId })
 
       // Process queue if not already processing
       if (!this.isProcessing) {
         this.processQueue()
       }
     })
+
+    // Track this job
+    this.activeJobs.set(text, translationPromise)
+
+    // Clean up tracking when job completes
+    translationPromise.finally(() => {
+      this.activeJobs.delete(text)
+    })
+
+    return translationPromise
   }
 
   private async processQueue(): Promise<void> {
@@ -78,6 +109,19 @@ Guidelines:
       try {
         if (!this.session) {
           throw new Error('Translation service not initialized')
+        }
+
+        // Check if we should skip this job (duplicate text already processed)
+        const isDuplicate = this.translationQueue.some(
+          queuedItem => queuedItem.text === item.text
+        )
+        if (isDuplicate) {
+          console.log(
+            '⏭️ Skipping duplicate translation in queue:',
+            item.text.substring(0, 30) + '...'
+          )
+          item.resolve('') // Resolve with empty string for duplicates
+          continue
         }
 
         const translation = await translateToJapanese(
@@ -104,7 +148,7 @@ Guidelines:
       }
 
       // Small delay between translations to avoid overwhelming the AI
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 50))
     }
 
     this.isProcessing = false
@@ -118,6 +162,9 @@ Guidelines:
         item.reject(new Error('Translation service destroyed'))
       }
     }
+
+    // Clear active jobs
+    this.activeJobs.clear()
 
     if (this.abortController) {
       this.abortController.abort()

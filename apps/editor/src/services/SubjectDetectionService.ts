@@ -67,6 +67,7 @@ export class SubjectDetectionService {
   private isInitialized = false
   private transcriptionHistory: string[] = []
   private maxHistorySize = 10 // Keep last 10 transcriptions for context
+  private activeJobs = new Map<string, Promise<SubjectDetectionResult>>() // Track ongoing analyses
 
   async initialize(): Promise<void> {
     if (this.isInitialized) {
@@ -156,6 +157,34 @@ Respond only with JSON containing text and emoji.`,
       throw new Error('Subject Detection Service not initialized')
     }
 
+    // Create a job key for deduplication
+    const jobKey = transcription.trim()
+
+    // Check if this exact transcription is already being analyzed
+    const existingJob = this.activeJobs.get(jobKey)
+    if (existingJob) {
+      console.log(
+        '🔄 Reusing existing subject analysis job for:',
+        transcription.substring(0, 30) + '...'
+      )
+      return existingJob
+    }
+
+    // Create new analysis promise and track it
+    const analysisPromise = this.performAnalysis(transcription)
+    this.activeJobs.set(jobKey, analysisPromise)
+
+    // Clean up tracking when job completes
+    analysisPromise.finally(() => {
+      this.activeJobs.delete(jobKey)
+    })
+
+    return analysisPromise
+  }
+
+  private async performAnalysis(
+    transcription: string
+  ): Promise<SubjectDetectionResult> {
     // Create context from recent transcriptions
     const context = this.transcriptionHistory.slice(-5).join(' | ')
 
@@ -171,7 +200,7 @@ New transcription: "${transcription}"`
 
     try {
       // Step 1: Determine the action
-      const actionResponse = await this.actionSession.prompt(contextPrompt, {
+      const actionResponse = await this.actionSession!.prompt(contextPrompt, {
         responseConstraint: actionSchema,
       })
 
@@ -182,7 +211,7 @@ New transcription: "${transcription}"`
 
       if (actionResult.action === 'changeSubject') {
         // Step 2a: Get the title for subject change
-        const titleResponse = await this.titleSession.prompt(
+        const titleResponse = await this.titleSession!.prompt(
           `Create a title for this new topic: "${transcription}"`,
           {
             responseConstraint: titleSchema,
@@ -195,7 +224,7 @@ New transcription: "${transcription}"`
         if (!titleResult.title || titleResult.title.trim() === '') {
           console.warn('⚠️ Empty title generated, falling back to bullet point')
           // Fall back to bullet point
-          const bulletResponse = await this.bulletPointSession.prompt(
+          const bulletResponse = await this.bulletPointSession!.prompt(
             `Create a bullet point from: "${transcription}"`,
             {
               responseConstraint: bulletPointSchema,
@@ -216,7 +245,7 @@ New transcription: "${transcription}"`
         }
       } else {
         // Step 2b: Get bullet point details
-        const bulletResponse = await this.bulletPointSession.prompt(
+        const bulletResponse = await this.bulletPointSession!.prompt(
           `Create a bullet point from: "${transcription}"`,
           {
             responseConstraint: bulletPointSchema,
@@ -292,6 +321,9 @@ New transcription: "${transcription}"`
   }
 
   destroy(): void {
+    // Clear active jobs
+    this.activeJobs.clear()
+
     if (this.actionSession) {
       this.actionSession.destroy()
       this.actionSession = null

@@ -8,6 +8,9 @@ import {
 import { SubjectDetectionService } from '../services/SubjectDetectionService'
 import { SubjectCard, SubjectCardRef } from './SubjectCard'
 
+// Global job tracker to prevent duplicate subject analysis
+const activeAnalysisJobs = new Set<string>()
+
 export function SubjectDisplay() {
   const { currentSubject, changeSubject } = useSubject()
   const { onTranscriptionComplete } = useTranscriptionEvents()
@@ -16,6 +19,7 @@ export function SubjectDisplay() {
     () => new SubjectDetectionService()
   )
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   // Initialize subject detection service
   useEffect(() => {
@@ -23,15 +27,39 @@ export function SubjectDisplay() {
     return () => subjectDetectionService.destroy()
   }, [subjectDetectionService])
 
-  // Handle transcription completion events
+  // Handle transcription completion events with deduplication
   const handleTranscriptionComplete = useCallback(
     async (transcription: CompletedTranscription) => {
+      // Create a unique job key for this transcription
+      const jobKey = `analysis-${transcription.id}-${transcription.text.substring(0, 50)}`
+
+      // Check if this analysis is already in progress
+      if (activeAnalysisJobs.has(jobKey)) {
+        console.log('⏭️ Skipping duplicate subject analysis job:', jobKey)
+        return
+      }
+
+      // Cancel any previous analysis
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+
+      // Create new abort controller for this analysis
+      abortControllerRef.current = new AbortController()
+      const signal = abortControllerRef.current.signal
+
+      // Mark job as active
+      activeAnalysisJobs.add(jobKey)
       setIsAnalyzing(true)
 
       try {
+        if (signal.aborted) return
+
         const result = await subjectDetectionService.analyzeTranscription(
           transcription.text
         )
+
+        if (signal.aborted) return
 
         if (result.action.action === 'changeSubject') {
           // Create new subject
@@ -50,10 +78,15 @@ export function SubjectDisplay() {
         } else if (result.action.action === 'addBulletPoint') {
           // If we don't have a current subject, create one first with a proper title
           if (!currentSubject) {
+            if (signal.aborted) return
+
             const bootstrapTitle =
               await subjectDetectionService.generateBootstrapTitle(
                 transcription.text
               )
+
+            if (signal.aborted) return
+
             const bootstrapSubject = {
               id: Math.random().toString(36).substr(2, 9),
               title: bootstrapTitle,
@@ -71,25 +104,41 @@ export function SubjectDisplay() {
           subjectCardRef.current?.addBulletPoint(bulletPoint)
         }
       } catch (error) {
-        console.error('Failed to analyze transcription:', error)
+        if (!signal.aborted) {
+          console.error('Failed to analyze transcription:', error)
+        }
       } finally {
-        setIsAnalyzing(false)
+        // Always clean up
+        activeAnalysisJobs.delete(jobKey)
+        if (!signal.aborted) {
+          setIsAnalyzing(false)
+        }
       }
     },
     [subjectDetectionService, currentSubject, changeSubject]
   )
 
-  // Subscribe to transcription events
+  // Subscribe to transcription events with stable callback
   useEffect(() => {
     const unsubscribe = onTranscriptionComplete(handleTranscriptionComplete)
     return unsubscribe
   }, [onTranscriptionComplete, handleTranscriptionComplete])
 
-  const handleSubjectChange = (
-    newSubject: NonNullable<typeof currentSubject>
-  ) => {
-    changeSubject(newSubject)
-  }
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
+
+  const handleSubjectChange = useCallback(
+    (newSubject: NonNullable<typeof currentSubject>) => {
+      changeSubject(newSubject)
+    },
+    [changeSubject]
+  )
 
   return (
     <div className="h-full flex flex-col">

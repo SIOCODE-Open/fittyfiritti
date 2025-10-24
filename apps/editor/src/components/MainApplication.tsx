@@ -77,7 +77,7 @@ export function MainApplication() {
     return new Blob([buffer], { type: 'audio/wav' })
   }, [])
 
-  // Async translation helper
+  // Async translation helper with job deduplication
   const translateTextAsync = useCallback(
     (cardId: string, text: string) => {
       setAppState(prev => ({
