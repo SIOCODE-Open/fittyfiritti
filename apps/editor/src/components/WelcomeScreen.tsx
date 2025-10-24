@@ -13,9 +13,6 @@ export function WelcomeScreen({
     <div className="flex flex-col items-center justify-center min-h-screen">
       <div className="text-center mb-12">
         <h1 className="text-6xl font-bold text-gray-900 mb-4">DiAI</h1>
-        <p className="text-xl text-gray-600">
-          Real-time AI Transcription & Note-Taking
-        </p>
       </div>
 
       <button

@@ -48,11 +48,15 @@ export function SubjectDisplay() {
             subjectCardRef.current?.changeSubject(newSubject)
           }
         } else if (result.action.action === 'addBulletPoint') {
-          // If we don't have a current subject, create one first
+          // If we don't have a current subject, create one first with a proper title
           if (!currentSubject) {
+            const bootstrapTitle =
+              await subjectDetectionService.generateBootstrapTitle(
+                transcription.text
+              )
             const bootstrapSubject = {
               id: Math.random().toString(36).substr(2, 9),
-              title: 'General Discussion',
+              title: bootstrapTitle,
             }
             changeSubject(bootstrapSubject)
           }
@@ -91,13 +95,6 @@ export function SubjectDisplay() {
     <div className="h-full flex flex-col">
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {isAnalyzing && (
-          <div className="mb-4 flex items-center gap-2 text-sm text-blue-600">
-            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <span>Analyzing transcription...</span>
-          </div>
-        )}
-
         {/* Current Subject */}
         {currentSubject && (
           <SubjectCard
@@ -105,6 +102,12 @@ export function SubjectDisplay() {
             subject={currentSubject}
             onSubjectChange={handleSubjectChange}
           />
+        )}
+
+        {isAnalyzing && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-blue-600">
+            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          </div>
         )}
 
         {/* No content state */}

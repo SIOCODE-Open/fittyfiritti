@@ -259,6 +259,34 @@ New transcription: "${transcription}"`
     console.log('🧹 Subject detection history cleared')
   }
 
+  async generateBootstrapTitle(transcription: string): Promise<string> {
+    if (!this.titleSession) {
+      throw new Error('Subject Detection Service not initialized')
+    }
+
+    try {
+      const titleResponse = await this.titleSession.prompt(
+        `Create a title for this conversation topic based on the first message: "${transcription}"`,
+        {
+          responseConstraint: titleSchema,
+        }
+      )
+
+      console.log('🧠 Bootstrap title generation:', titleResponse)
+      const titleResult = JSON.parse(titleResponse)
+
+      if (!titleResult.title || titleResult.title.trim() === '') {
+        console.warn('⚠️ Empty bootstrap title generated, using fallback')
+        return 'General Discussion'
+      }
+
+      return titleResult.title.trim()
+    } catch (error) {
+      console.error('Failed to generate bootstrap title:', error)
+      return 'General Discussion'
+    }
+  }
+
   getHistorySize(): number {
     return this.transcriptionHistory.length
   }

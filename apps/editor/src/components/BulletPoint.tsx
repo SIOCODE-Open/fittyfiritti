@@ -18,7 +18,6 @@ export function BulletPoint({ bulletPoint }: BulletPointProps) {
           {isTranslating && (
             <div className="mb-3 flex items-center gap-2 text-sm text-blue-600">
               <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <span>Translating...</span>
             </div>
           )}
           {textJa && (
