@@ -2,8 +2,8 @@ import type { Translator } from '@diai/built-in-ai-api'
 import {
   checkTranslatorAvailability,
   createTranslator,
-  translateToJapanese,
-  translateToJapaneseStreaming,
+  translateText,
+  translateTextStreaming,
 } from '@diai/built-in-ai-api'
 import { TranslationService } from '../types'
 
@@ -34,20 +34,36 @@ export class TranslationServiceImpl implements TranslationService {
     Promise<ReadableStream<string>>
   >() // Track ongoing streaming jobs
   private isInitialized = false
+  private targetLanguage: 'english' | 'spanish' | 'japanese' = 'japanese'
 
-  async initialize(): Promise<void> {
+  async initialize(
+    targetLanguage: 'english' | 'spanish' | 'japanese' = 'japanese'
+  ): Promise<void> {
+    this.targetLanguage = targetLanguage
+
     try {
       this.abortController = new AbortController()
+
+      // Language configuration
+      const languageConfig = {
+        english: { code: 'en', name: 'English' },
+        spanish: { code: 'es', name: 'Spanish' },
+        japanese: { code: 'ja', name: 'Japanese' },
+      }
+
+      const config = languageConfig[targetLanguage]
 
       // Check if Translation API is available
       const isAvailable = await checkTranslatorAvailability()
       if (isAvailable) {
-        // Pre-create translator for English to Japanese
-        this.translator = await createTranslator('en', 'ja')
-        console.log('🌐 Translation service initialized with Translator API')
+        // Pre-create translator for English to target language
+        this.translator = await createTranslator('en', config.code)
+        console.log(
+          `🌐 Translation service initialized with Translator API (English to ${config.name})`
+        )
       } else {
         console.log(
-          '🌐 Translation service initialized with fallback mode (Prompt API)'
+          `🌐 Translation service initialized with fallback mode (Prompt API, English to ${config.name})`
         )
       }
 
@@ -59,7 +75,7 @@ export class TranslationServiceImpl implements TranslationService {
     }
   }
 
-  async translateToJapaneseStreaming(
+  async translateToTargetLanguageStreaming(
     text: string
   ): Promise<ReadableStream<string>> {
     if (!this.isInitialized) {
@@ -142,8 +158,16 @@ export class TranslationServiceImpl implements TranslationService {
         }
 
         // Use the new streaming Translation API function
-        const stream = await translateToJapaneseStreaming(
+        const languageConfig = {
+          english: 'en',
+          spanish: 'es',
+          japanese: 'ja',
+        }
+
+        const stream = await translateTextStreaming(
           item.text,
+          'en', // From English
+          languageConfig[this.targetLanguage], // To target language
           this.abortController?.signal
         )
 
@@ -179,7 +203,7 @@ export class TranslationServiceImpl implements TranslationService {
     this.isStreamingProcessing = false
   }
 
-  async translateToJapanese(text: string): Promise<string> {
+  async translateToTargetLanguage(text: string): Promise<string> {
     if (!this.isInitialized) {
       throw new Error('Translation service not initialized')
     }
@@ -248,8 +272,16 @@ export class TranslationServiceImpl implements TranslationService {
         }
 
         // Use the new Translation API function which handles fallback automatically
-        const translation = await translateToJapanese(
+        const languageConfig = {
+          english: 'en',
+          spanish: 'es',
+          japanese: 'ja',
+        }
+
+        const translation = await translateText(
           item.text,
+          'en', // From English
+          languageConfig[this.targetLanguage], // To target language
           this.abortController?.signal
         )
 

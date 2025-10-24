@@ -48,9 +48,9 @@ export function useSubjectTranslation(title: string) {
 
     try {
       // Check if streaming is available, otherwise fall back to regular translation
-      if (translationService.translateToJapaneseStreaming) {
+      if (translationService.translateToTargetLanguageStreaming) {
         const stream =
-          await translationService.translateToJapaneseStreaming(title)
+          await translationService.translateToTargetLanguageStreaming(title)
         const reader = stream.getReader()
         let accumulatedText = ''
 
@@ -82,7 +82,8 @@ export function useSubjectTranslation(title: string) {
         }
       } else {
         // Fallback to regular translation
-        const translation = await translationService.translateToJapanese(title)
+        const translation =
+          await translationService.translateToTargetLanguage(title)
 
         // Only update state if this is still the current title and not aborted
         if (!signal.aborted && currentTitleRef.current === title) {

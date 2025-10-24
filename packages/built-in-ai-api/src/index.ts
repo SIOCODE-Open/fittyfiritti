@@ -206,6 +206,9 @@ export async function getLanguageModelParams(): Promise<LanguageModelParams | nu
 export async function createLanguageModelSession(
   options?: LanguageModelCreateOptions
 ): Promise<LanguageModelSession> {
+  // TEMPORARILY DISABLE CACHING to fix application issues
+  // TODO: Implement proper caching that doesn't interfere with service lifecycle
+
   let languageModelAPI: LanguageModel | undefined
 
   // Try global LanguageModel first (Chrome 141+)
@@ -228,7 +231,20 @@ export async function createLanguageModelSession(
     )
   }
 
-  return await languageModelAPI.create(options)
+  const session = await languageModelAPI.create(options)
+
+  return session
+}
+
+// Export session cache utilities
+export async function getSessionCacheStats() {
+  const { aiSessionCache } = await import('./session-cache')
+  return aiSessionCache.getStats()
+}
+
+export async function clearSessionCache() {
+  const { aiSessionCache } = await import('./session-cache')
+  aiSessionCache.clear()
 }
 
 // Multi-modal session creation with audio support
@@ -238,6 +254,10 @@ export async function createMultiModalSession(
     enableTranslation?: boolean
   }
 ): Promise<LanguageModelSession> {
+  // TEMPORARILY DISABLE CACHING to fix application issues
+  // TODO: Implement proper caching that doesn't interfere with service lifecycle
+
+  // Prepare standard LanguageModelCreateOptions
   const defaultOptions: LanguageModelCreateOptions = {
     temperature: 0.8,
     topK: 3,
@@ -254,7 +274,37 @@ export async function createMultiModalSession(
   }
 
   const mergedOptions = { ...defaultOptions, ...options }
-  return await createLanguageModelSession(mergedOptions)
+
+  // Extract the custom flags for caching but not for the API call
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { enableAudio, enableTranslation, ...apiOptions } = mergedOptions
+
+  // Create new session directly
+  let languageModelAPI: LanguageModel | undefined
+
+  // Try global LanguageModel first (Chrome 141+)
+  if (typeof window !== 'undefined' && window.LanguageModel) {
+    languageModelAPI = window.LanguageModel
+  }
+  // Fallback to window.ai.languageModel
+  else if (typeof window !== 'undefined' && window.ai?.languageModel) {
+    languageModelAPI = window.ai.languageModel
+  }
+
+  if (!languageModelAPI) {
+    throw new AIModelUnavailableError('Language model is not available')
+  }
+
+  const availability = await languageModelAPI.availability(apiOptions)
+  if (availability === 'unavailable') {
+    throw new AIModelUnavailableError(
+      'Language model is not available on this device'
+    )
+  }
+
+  const session = await languageModelAPI.create(apiOptions)
+
+  return session
 }
 
 // Audio transcription helper
@@ -629,14 +679,12 @@ Respond with only the Japanese translation, no additional text.`
           while (true) {
             const { done, value } = await reader.read()
             if (done) {
-              session.destroy()
               controller.close()
               break
             }
             controller.enqueue(value)
           }
         } catch (error) {
-          session.destroy()
           controller.error(error)
         }
       }
@@ -644,7 +692,7 @@ Respond with only the Japanese translation, no additional text.`
       pump()
     },
     cancel() {
-      session.destroy()
+      // Don't destroy cached sessions
     },
   })
 }
@@ -678,14 +726,12 @@ Respond with only the English translation, no additional text.`
           while (true) {
             const { done, value } = await reader.read()
             if (done) {
-              session.destroy()
               controller.close()
               break
             }
             controller.enqueue(value)
           }
         } catch (error) {
-          session.destroy()
           controller.error(error)
         }
       }
@@ -693,7 +739,7 @@ Respond with only the English translation, no additional text.`
       pump()
     },
     cancel() {
-      session.destroy()
+      // Don't destroy cached sessions
     },
   })
 }
@@ -729,14 +775,12 @@ Respond with only the translation, no additional text.`
           while (true) {
             const { done, value } = await reader.read()
             if (done) {
-              session.destroy()
               controller.close()
               break
             }
             controller.enqueue(value)
           }
         } catch (error) {
-          session.destroy()
           controller.error(error)
         }
       }
@@ -744,7 +788,7 @@ Respond with only the translation, no additional text.`
       pump()
     },
     cancel() {
-      session.destroy()
+      // Don't destroy cached sessions
     },
   })
 }

@@ -48,9 +48,9 @@ export function useBulletPointTranslation(text: string) {
 
     try {
       // Check if streaming is available, otherwise fall back to regular translation
-      if (translationService.translateToJapaneseStreaming) {
+      if (translationService.translateToTargetLanguageStreaming) {
         const stream =
-          await translationService.translateToJapaneseStreaming(text)
+          await translationService.translateToTargetLanguageStreaming(text)
         const reader = stream.getReader()
         let accumulatedText = ''
 
@@ -85,7 +85,8 @@ export function useBulletPointTranslation(text: string) {
         }
       } else {
         // Fallback to regular translation
-        const translation = await translationService.translateToJapanese(text)
+        const translation =
+          await translationService.translateToTargetLanguage(text)
 
         // Only update state if this is still the current text and not aborted
         if (!signal.aborted && currentTextRef.current === text) {

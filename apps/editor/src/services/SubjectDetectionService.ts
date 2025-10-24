@@ -324,6 +324,7 @@ New transcription: "${transcription}"`
     // Clear active jobs
     this.activeJobs.clear()
 
+    // Properly destroy sessions that this service owns
     if (this.actionSession) {
       this.actionSession.destroy()
       this.actionSession = null
@@ -336,6 +337,7 @@ New transcription: "${transcription}"`
       this.bulletPointSession.destroy()
       this.bulletPointSession = null
     }
+
     this.transcriptionHistory = []
     this.isInitialized = false
     console.log('🧠 Subject Detection Service destroyed')

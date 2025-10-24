@@ -112,9 +112,9 @@ export function MainApplication() {
       }))
 
       // Check if streaming is available, otherwise fall back to regular translation
-      if (translationService.translateToJapaneseStreaming) {
+      if (translationService.translateToTargetLanguageStreaming) {
         translationService
-          .translateToJapaneseStreaming(text)
+          .translateToTargetLanguageStreaming(text)
           .then(async stream => {
             const reader = stream.getReader()
             let accumulatedText = ''
@@ -166,7 +166,7 @@ export function MainApplication() {
       } else {
         // Fallback to regular translation
         translationService
-          .translateToJapanese(text)
+          .translateToTargetLanguage(text)
           .then(translation => {
             setAppState(prev => ({
               ...prev,
@@ -541,7 +541,7 @@ export function MainApplication() {
       // Initialize services
       await Promise.all([
         transcriptionService.initialize(),
-        translationService.initialize(),
+        translationService.initialize(selectedOtherPartyLanguage),
       ])
 
       // Set up VAD callbacks
@@ -573,8 +573,8 @@ export function MainApplication() {
 
       // Initialize system services
       await Promise.all([
-        systemTranscriptionService.initialize(),
-        systemTranslationService.initialize(),
+        systemTranscriptionService.initialize(otherPartyLanguage),
+        systemTranslationService.initialize(otherPartyLanguage),
       ])
 
       // Set up system audio callbacks

@@ -2,8 +2,8 @@ import type { Translator } from '@diai/built-in-ai-api'
 import {
   checkTranslatorAvailability,
   createTranslator,
-  translateToEnglish,
-  translateToEnglishStreaming,
+  translateText,
+  translateTextStreaming,
 } from '@diai/built-in-ai-api'
 
 interface SystemTranslationJob {
@@ -23,7 +23,7 @@ interface SystemStreamingTranslationJob {
 export interface SystemTranslationService {
   translateToEnglish(text: string): Promise<string>
   translateToEnglishStreaming?(text: string): Promise<ReadableStream<string>>
-  initialize(): Promise<void>
+  initialize(sourceLanguage?: 'english' | 'spanish' | 'japanese'): Promise<void>
   destroy(): void
 }
 
@@ -40,22 +40,36 @@ export class SystemTranslationServiceImpl implements SystemTranslationService {
     Promise<ReadableStream<string>>
   >() // Track ongoing streaming jobs
   private isInitialized = false
+  private sourceLanguage: 'english' | 'spanish' | 'japanese' = 'japanese'
 
-  async initialize(): Promise<void> {
+  async initialize(
+    sourceLanguage: 'english' | 'spanish' | 'japanese' = 'japanese'
+  ): Promise<void> {
+    this.sourceLanguage = sourceLanguage
+
     try {
       this.abortController = new AbortController()
+
+      // Language configuration
+      const languageConfig = {
+        english: { code: 'en', name: 'English' },
+        spanish: { code: 'es', name: 'Spanish' },
+        japanese: { code: 'ja', name: 'Japanese' },
+      }
+
+      const config = languageConfig[sourceLanguage]
 
       // Check if Translation API is available
       const isAvailable = await checkTranslatorAvailability()
       if (isAvailable) {
-        // Pre-create translator for Japanese to English
-        this.translator = await createTranslator('ja', 'en')
+        // Pre-create translator for source language to English
+        this.translator = await createTranslator(config.code, 'en')
         console.log(
-          '🌐 System translation service initialized with Translator API (Japanese to English)'
+          `🌐 System translation service initialized with Translator API (${config.name} to English)`
         )
       } else {
         console.log(
-          '🌐 System translation service initialized with fallback mode (Prompt API)'
+          `🌐 System translation service initialized with fallback mode (Prompt API, ${config.name} to English)`
         )
       }
 
@@ -82,10 +96,10 @@ export class SystemTranslationServiceImpl implements SystemTranslationService {
       })
     }
 
-    // Quick check if text is already primarily English (heuristic)
-    const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text)
-    if (!hasJapanese) {
-      console.log('📝 Text appears to be English already, returning as-is')
+    // Check if text needs translation based on source language
+    const needsTranslation = this.sourceLanguage !== 'english'
+    if (!needsTranslation) {
+      console.log('📝 Source language is English, returning as-is')
       return new ReadableStream({
         start(controller) {
           controller.enqueue(text)
@@ -162,13 +176,21 @@ export class SystemTranslationServiceImpl implements SystemTranslationService {
         }
 
         // Use the new streaming Translation API function
-        const stream = await translateToEnglishStreaming(
+        const languageConfig = {
+          english: 'en',
+          spanish: 'es',
+          japanese: 'ja',
+        }
+
+        const stream = await translateTextStreaming(
           item.text,
+          languageConfig[this.sourceLanguage], // From source language
+          'en', // To English
           this.abortController?.signal
         )
 
         console.log(
-          `🌐 Streaming translation started (JA→EN): "${item.text.substring(0, 30)}..."`
+          `🌐 Streaming translation started (${this.sourceLanguage.toUpperCase()}→EN): "${item.text.substring(0, 30)}..."`
         )
         item.resolve(stream)
       } catch (error) {
@@ -208,10 +230,10 @@ export class SystemTranslationServiceImpl implements SystemTranslationService {
       return ''
     }
 
-    // Quick check if text is already primarily English (heuristic)
-    const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text)
-    if (!hasJapanese) {
-      console.log('📝 Text appears to be English already, returning as-is')
+    // Check if text needs translation based on source language
+    const needsTranslation = this.sourceLanguage !== 'english'
+    if (!needsTranslation) {
+      console.log('📝 Source language is English, returning as-is')
       return text
     }
 
@@ -275,13 +297,21 @@ export class SystemTranslationServiceImpl implements SystemTranslationService {
         }
 
         // Use the new Translation API function which handles fallback automatically
-        const translation = await translateToEnglish(
+        const languageConfig = {
+          english: 'en',
+          spanish: 'es',
+          japanese: 'ja',
+        }
+
+        const translation = await translateText(
           item.text,
+          languageConfig[this.sourceLanguage], // From source language
+          'en', // To English
           this.abortController?.signal
         )
 
         console.log(
-          `🌐 Translated (JA→EN): "${item.text.substring(0, 30)}..." → "${translation.substring(0, 30)}..."`
+          `🌐 Translated (${this.sourceLanguage.toUpperCase()}→EN): "${item.text.substring(0, 30)}..." → "${translation.substring(0, 30)}..."`
         )
         item.resolve(translation)
       } catch (error) {

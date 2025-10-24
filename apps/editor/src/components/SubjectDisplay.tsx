@@ -1,12 +1,12 @@
 import { Icon } from '@iconify/react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useSubject } from '../contexts/SubjectContext'
 import {
   useTranscriptionEvents,
   type CompletedTranscription,
 } from '../contexts/TranscriptionEventsContext'
 import { SubjectDetectionService } from '../services/SubjectDetectionService'
-import { SubjectCard, SubjectCardRef } from './SubjectCard'
+import { SubjectCard, type BulletPointItem } from './SubjectCard'
 
 // Global job tracker to prevent duplicate subject analysis
 const activeAnalysisJobs = new Set<string>()
@@ -14,12 +14,11 @@ const activeAnalysisJobs = new Set<string>()
 export function SubjectDisplay() {
   const { currentSubject, changeSubject } = useSubject()
   const { onTranscriptionComplete } = useTranscriptionEvents()
-  const subjectCardRef = useRef<SubjectCardRef>(null)
   const [subjectDetectionService] = useState(
     () => new SubjectDetectionService()
   )
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const abortControllerRef = useRef<AbortController | null>(null)
+  const [bulletPoints, setBulletPoints] = useState<BulletPointItem[]>([])
 
   // Initialize subject detection service
   useEffect(() => {
@@ -27,7 +26,12 @@ export function SubjectDisplay() {
     return () => subjectDetectionService.destroy()
   }, [subjectDetectionService])
 
-  // Handle transcription completion events with deduplication
+  // Clear bullet points when subject changes
+  useEffect(() => {
+    setBulletPoints([])
+  }, [currentSubject?.id])
+
+  // Handle transcription completion events with simple state updates
   const handleTranscriptionComplete = useCallback(
     async (transcription: CompletedTranscription) => {
       // Create a unique job key for this transcription
@@ -39,53 +43,29 @@ export function SubjectDisplay() {
         return
       }
 
-      // Cancel any previous analysis
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-
-      // Create new abort controller for this analysis
-      abortControllerRef.current = new AbortController()
-      const signal = abortControllerRef.current.signal
-
       // Mark job as active
       activeAnalysisJobs.add(jobKey)
       setIsAnalyzing(true)
 
       try {
-        if (signal.aborted) return
-
         const result = await subjectDetectionService.analyzeTranscription(
           transcription.text
         )
 
-        if (signal.aborted) return
-
         if (result.action.action === 'changeSubject') {
-          // Create new subject
+          // Create new subject - this will automatically clear bullet points via useEffect
           const newSubject = {
             id: Math.random().toString(36).substr(2, 9),
             title: result.action.title,
           }
-
-          // If we don't have a current subject, set it directly
-          if (!currentSubject) {
-            changeSubject(newSubject)
-          } else {
-            // Tell the current subject card to change subject
-            subjectCardRef.current?.changeSubject(newSubject)
-          }
+          changeSubject(newSubject)
         } else if (result.action.action === 'addBulletPoint') {
-          // If we don't have a current subject, create one first with a proper title
+          // If we don't have a current subject, create one first
           if (!currentSubject) {
-            if (signal.aborted) return
-
             const bootstrapTitle =
               await subjectDetectionService.generateBootstrapTitle(
                 transcription.text
               )
-
-            if (signal.aborted) return
 
             const bootstrapSubject = {
               id: Math.random().toString(36).substr(2, 9),
@@ -94,51 +74,31 @@ export function SubjectDisplay() {
             changeSubject(bootstrapSubject)
           }
 
-          // Add bullet point to current subject card
-          const bulletPoint = {
+          // Add bullet point directly to state
+          const bulletPoint: BulletPointItem = {
             id: Math.random().toString(36).substr(2, 9),
             text: result.action.text,
             emoji: result.action.emoji,
             timestamp: Date.now(),
           }
-          subjectCardRef.current?.addBulletPoint(bulletPoint)
+          setBulletPoints(prev => [...prev, bulletPoint])
         }
       } catch (error) {
-        if (!signal.aborted) {
-          console.error('Failed to analyze transcription:', error)
-        }
+        console.error('Failed to analyze transcription:', error)
       } finally {
         // Always clean up
         activeAnalysisJobs.delete(jobKey)
-        if (!signal.aborted) {
-          setIsAnalyzing(false)
-        }
+        setIsAnalyzing(false)
       }
     },
     [subjectDetectionService, currentSubject, changeSubject]
   )
 
-  // Subscribe to transcription events with stable callback
+  // Subscribe to transcription events
   useEffect(() => {
     const unsubscribe = onTranscriptionComplete(handleTranscriptionComplete)
     return unsubscribe
   }, [onTranscriptionComplete, handleTranscriptionComplete])
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-    }
-  }, [])
-
-  const handleSubjectChange = useCallback(
-    (newSubject: NonNullable<typeof currentSubject>) => {
-      changeSubject(newSubject)
-    },
-    [changeSubject]
-  )
 
   return (
     <div className="h-full flex flex-col">
@@ -146,11 +106,7 @@ export function SubjectDisplay() {
       <div className="flex-1 overflow-y-auto p-4">
         {/* Current Subject */}
         {currentSubject && (
-          <SubjectCard
-            ref={subjectCardRef}
-            subject={currentSubject}
-            onSubjectChange={handleSubjectChange}
-          />
+          <SubjectCard subject={currentSubject} bulletPoints={bulletPoints} />
         )}
 
         {isAnalyzing && (

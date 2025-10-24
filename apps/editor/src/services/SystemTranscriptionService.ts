@@ -3,7 +3,7 @@ import { createMultiModalSession, transcribeAudio } from '@diai/built-in-ai-api'
 
 export interface SystemTranscriptionService {
   transcribe(audioBlob: Blob): Promise<string>
-  initialize(): Promise<void>
+  initialize(language: 'english' | 'spanish' | 'japanese'): Promise<void>
   destroy(): void
 }
 
@@ -12,12 +12,63 @@ export class SystemTranscriptionServiceImpl
 {
   private session?: LanguageModelSession
   private abortController?: AbortController
+  private targetLanguage: 'english' | 'spanish' | 'japanese' = 'japanese'
 
-  async initialize(): Promise<void> {
+  async initialize(
+    language: 'english' | 'spanish' | 'japanese'
+  ): Promise<void> {
+    this.targetLanguage = language
+
     try {
       this.abortController = new AbortController()
 
-      // Create a multi-modal session optimized for Japanese audio transcription
+      // Language configuration
+      const languageConfig = {
+        english: {
+          code: 'en',
+          name: 'English',
+          prompt: `You are a precise English transcription assistant. 
+
+Your task:
+- Transcribe audio content to English text
+- Assume the audio contains English speech unless clearly otherwise
+- Use proper English grammar and spelling
+- If the audio contains non-English speech, transcribe it phonetically or translate to English
+- Respond with only the English transcription, no additional commentary
+- If no clear speech is detected, respond with an empty string`,
+        },
+        spanish: {
+          code: 'es',
+          name: 'Spanish',
+          prompt: `You are a precise Spanish transcription assistant. 
+
+Your task:
+- Transcribe audio content to Spanish text
+- Assume the audio contains Spanish speech unless clearly otherwise
+- Use proper Spanish grammar, spelling, and accents
+- If the audio contains non-Spanish speech, transcribe it phonetically or translate to Spanish
+- Respond with only the Spanish transcription, no additional commentary
+- If no clear speech is detected, respond with an empty string`,
+        },
+        japanese: {
+          code: 'ja',
+          name: 'Japanese',
+          prompt: `You are a precise Japanese transcription assistant. 
+
+Your task:
+- Transcribe audio content to Japanese text
+- Assume the audio contains Japanese speech unless clearly otherwise
+- Use proper Japanese characters (hiragana, katakana, kanji) as appropriate
+- Maintain natural Japanese sentence structure and grammar
+- If the audio contains non-Japanese speech, transcribe it phonetically in katakana
+- Respond with only the Japanese transcription, no additional commentary
+- If no clear speech is detected, respond with an empty string`,
+        },
+      }
+
+      const config = languageConfig[language]
+
+      // Create a multi-modal session optimized for the target language transcription
       this.session = await createMultiModalSession({
         temperature: 0.3, // Lower temperature for more accurate transcription
         topK: 5,
@@ -28,26 +79,19 @@ export class SystemTranscriptionServiceImpl
           { type: 'audio' }, // Audio input
         ],
         expectedOutputs: [
-          { type: 'text', languages: ['ja'] }, // Japanese text output
+          { type: 'text', languages: [config.code] }, // Target language output
         ],
         initialPrompts: [
           {
             role: 'system',
-            content: `You are a precise Japanese transcription assistant. 
-
-Your task:
-- Transcribe audio content to Japanese text
-- Assume the audio contains Japanese speech unless clearly otherwise
-- Use proper Japanese characters (hiragana, katakana, kanji) as appropriate
-- Maintain natural Japanese sentence structure and grammar
-- If the audio contains non-Japanese speech, transcribe it phonetically in katakana
-- Respond with only the Japanese transcription, no additional commentary
-- If no clear speech is detected, respond with an empty string`,
+            content: config.prompt,
           },
         ],
       })
 
-      console.log('🗾 System transcription service (Japanese) initialized')
+      console.log(
+        `🗾 System transcription service (${config.name}) initialized`
+      )
     } catch (error) {
       console.error('Failed to initialize system transcription service:', error)
       throw error
@@ -60,7 +104,9 @@ Your task:
     }
 
     try {
-      console.log('🗾 Transcribing system audio (expecting Japanese)...')
+      console.log(
+        `🗾 Transcribing system audio (expecting ${this.targetLanguage})...`
+      )
 
       const transcription = await transcribeAudio(
         this.session,
