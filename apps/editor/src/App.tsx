@@ -2,6 +2,7 @@ import { MainApplication } from './components/MainApplication'
 import { AIAvailabilityProvider } from './contexts/AIAvailabilityContext'
 import { AudioCaptureProvider } from './contexts/AudioCaptureContext'
 import { SubjectProvider } from './contexts/SubjectContext'
+import { SystemAudioAnalysisProvider } from './contexts/SystemAudioAnalysisContext'
 import { SystemAudioProvider } from './contexts/SystemAudioContext'
 import { SystemTranscriptionProvider } from './contexts/SystemTranscriptionContext'
 import { SystemTranslationProvider } from './contexts/SystemTranslationContext'
@@ -22,9 +23,11 @@ function App() {
                   <TranslationProvider>
                     <SystemTranslationProvider>
                       <TranscriptionEventsProvider>
-                        <SubjectProvider>
-                          <MainApplication />
-                        </SubjectProvider>
+                        <SystemAudioAnalysisProvider>
+                          <SubjectProvider>
+                            <MainApplication />
+                          </SubjectProvider>
+                        </SystemAudioAnalysisProvider>
                       </TranscriptionEventsProvider>
                     </SystemTranslationProvider>
                   </TranslationProvider>

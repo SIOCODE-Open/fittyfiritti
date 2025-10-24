@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSystemAudioAnalysis } from '../contexts/SystemAudioAnalysisContext'
 import { useSystemAudio } from '../contexts/SystemAudioContext'
 import { useSystemTranscription } from '../contexts/SystemTranscriptionContext'
 import { useSystemTranslation } from '../contexts/SystemTranslationContext'
@@ -24,6 +25,8 @@ export function MainApplication() {
   const systemTranscriptionService = useSystemTranscription()
   const systemTranslationService = useSystemTranslation()
   const { publishTranscription } = useTranscriptionEvents()
+  const { setIncludeSystemAudioInAnalysis, includeSystemAudioInAnalysis } =
+    useSystemAudioAnalysis()
   const vad = useVAD()
   const systemAudio = useSystemAudio()
 
@@ -422,12 +425,14 @@ export function MainApplication() {
           translateSystemTextAsync(loadingCardId, transcription)
         }
 
-        // Publish completed system transcription for subject analysis
-        publishTranscription({
-          id: loadingCardId,
-          text: transcription,
-          timestamp: Date.now(),
-        })
+        // Publish completed system transcription for subject analysis only if enabled
+        if (includeSystemAudioInAnalysis) {
+          publishTranscription({
+            id: loadingCardId,
+            text: transcription,
+            timestamp: Date.now(),
+          })
+        }
       } catch (error) {
         console.error('Failed to process system audio chunk:', error)
         setError('Failed to process system audio. Please try again.')
@@ -439,6 +444,7 @@ export function MainApplication() {
       publishTranscription,
       speakerLanguage,
       otherPartyLanguage,
+      includeSystemAudioInAnalysis,
     ]
   )
 
@@ -528,7 +534,8 @@ export function MainApplication() {
   // Start recording with VAD
   const handleStartRecording = async (
     selectedSpeakerLanguage: Language,
-    selectedOtherPartyLanguage: Language
+    selectedOtherPartyLanguage: Language,
+    includeSystemAudioInAnalysis: boolean
   ) => {
     try {
       setIsInitializing(true)
@@ -537,6 +544,9 @@ export function MainApplication() {
       // Set the languages
       setSpeakerLanguage(selectedSpeakerLanguage)
       setOtherPartyLanguage(selectedOtherPartyLanguage)
+
+      // Set the system audio analysis preference
+      setIncludeSystemAudioInAnalysis(includeSystemAudioInAnalysis)
 
       // Initialize services
       await Promise.all([
@@ -635,7 +645,7 @@ export function MainApplication() {
 
   // Wrapper for recording control panel (no language params needed)
   const handleStartRecordingWrapper = async () => {
-    return handleStartRecording(speakerLanguage, otherPartyLanguage)
+    return handleStartRecording(speakerLanguage, otherPartyLanguage, true)
   }
 
   // Cleanup services on unmount only

@@ -6,7 +6,8 @@ export type Language = 'english' | 'spanish' | 'japanese'
 interface WelcomeScreenProps {
   onStartRecording: (
     speakerLanguage: Language,
-    otherPartyLanguage: Language
+    otherPartyLanguage: Language,
+    includeSystemAudioInAnalysis: boolean
   ) => void
   isInitializing: boolean
 }
@@ -18,6 +19,8 @@ export function WelcomeScreen({
   const [speakerLanguage, setSpeakerLanguage] = useState<Language>('english')
   const [otherPartyLanguage, setOtherPartyLanguage] =
     useState<Language>('japanese')
+  const [includeSystemAudioInAnalysis, setIncludeSystemAudioInAnalysis] =
+    useState<boolean>(true)
 
   const languageOptions = [
     { value: 'english', label: 'English' },
@@ -26,7 +29,11 @@ export function WelcomeScreen({
   ]
 
   const handleStartRecording = () => {
-    onStartRecording(speakerLanguage, otherPartyLanguage)
+    onStartRecording(
+      speakerLanguage,
+      otherPartyLanguage,
+      includeSystemAudioInAnalysis
+    )
   }
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
@@ -83,6 +90,28 @@ export function WelcomeScreen({
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* System Audio Analysis Setting */}
+          <div>
+            <label className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={includeSystemAudioInAnalysis}
+                onChange={e =>
+                  setIncludeSystemAudioInAnalysis(e.target.checked)
+                }
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Include other party's speech in analysis
+              </span>
+            </label>
+            <p className="text-xs text-gray-500 mt-1 ml-7">
+              When checked, both your voice and the other party's voice will
+              influence the right-side content organization. When unchecked,
+              only your voice will create title changes and bullet points.
+            </p>
           </div>
         </div>
       </div>
