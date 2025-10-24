@@ -1,6 +1,7 @@
-import type { LanguageModelSession } from '@diai/built-in-ai-api'
+import type { Translator } from '@diai/built-in-ai-api'
 import {
-  createLanguageModelSession,
+  checkTranslatorAvailability,
+  createTranslator,
   translateToEnglish,
 } from '@diai/built-in-ai-api'
 
@@ -18,50 +19,41 @@ export interface SystemTranslationService {
 }
 
 export class SystemTranslationServiceImpl implements SystemTranslationService {
-  private session?: LanguageModelSession
+  private translator?: Translator
   private abortController?: AbortController
   private translationQueue: Array<SystemTranslationJob> = []
   private isProcessing = false
   private activeJobs = new Map<string, Promise<string>>() // Track ongoing jobs by text
+  private isInitialized = false
 
   async initialize(): Promise<void> {
     try {
       this.abortController = new AbortController()
 
-      this.session = await createLanguageModelSession({
-        temperature: 0.5,
-        topK: 10,
-        signal: this.abortController.signal,
-        expectedInputs: [{ type: 'text', languages: ['ja'] }],
-        expectedOutputs: [{ type: 'text', languages: ['en'] }],
-        initialPrompts: [
-          {
-            role: 'system',
-            content: `You are a professional Japanese to English translator. 
+      // Check if Translation API is available
+      const isAvailable = await checkTranslatorAvailability()
+      if (isAvailable) {
+        // Pre-create translator for Japanese to English
+        this.translator = await createTranslator('ja', 'en')
+        console.log(
+          '🌐 System translation service initialized with Translator API (Japanese to English)'
+        )
+      } else {
+        console.log(
+          '🌐 System translation service initialized with fallback mode (Prompt API)'
+        )
+      }
 
-Guidelines:
-- Translate naturally and conversationally
-- Maintain the original meaning and tone
-- Use appropriate English expressions and idioms when needed
-- For technical terms, use commonly accepted English equivalents
-- Keep translations concise but accurate
-- If the input is already in English, return it unchanged
-- Respond with only the English translation, no additional text`,
-          },
-        ],
-      })
-
-      console.log(
-        '🌐 System translation service (Japanese to English) initialized'
-      )
+      this.isInitialized = true
     } catch (error) {
       console.error('Failed to initialize system translation service:', error)
-      throw error
+      // Don't throw error - fallback will be used automatically
+      this.isInitialized = true
     }
   }
 
   async translateToEnglish(text: string): Promise<string> {
-    if (!this.session) {
+    if (!this.isInitialized) {
       throw new Error('System translation service not initialized')
     }
 
@@ -122,10 +114,6 @@ Guidelines:
       if (!item) continue
 
       try {
-        if (!this.session) {
-          throw new Error('System translation service not initialized')
-        }
-
         // Check if we should skip this job (duplicate text already processed)
         const isDuplicate = this.translationQueue.some(
           queuedItem => queuedItem.text === item.text
@@ -139,8 +127,8 @@ Guidelines:
           continue
         }
 
+        // Use the new Translation API function which handles fallback automatically
         const translation = await translateToEnglish(
-          this.session,
           item.text,
           this.abortController?.signal
         )
@@ -186,12 +174,13 @@ Guidelines:
       this.abortController = undefined
     }
 
-    if (this.session) {
-      this.session.destroy()
-      this.session = undefined
+    if (this.translator) {
+      this.translator.destroy()
+      this.translator = undefined
     }
 
     this.isProcessing = false
+    this.isInitialized = false
 
     console.log('🔄 System translation service destroyed')
   }

@@ -364,32 +364,237 @@ Respond with structured JSON.`
   }
 }
 
-// Translation helper
+// Chrome Translation API Types
+export type TranslatorAvailability = 'available' | 'downloadable' | 'no'
+
+export interface TranslatorCapabilities {
+  available: TranslatorAvailability
+}
+
+export interface TranslatorCreateOptions {
+  sourceLanguage: string
+  targetLanguage: string
+  monitor?: (monitor: DownloadMonitor) => void
+}
+
+export interface Translator {
+  translate(text: string): Promise<string>
+  translateStreaming(text: string): ReadableStream<string>
+  destroy(): void
+}
+
+// Main Translator Interface
+export interface TranslatorAPI {
+  availability(options: {
+    sourceLanguage: string
+    targetLanguage: string
+  }): Promise<TranslatorCapabilities>
+  create(options: TranslatorCreateOptions): Promise<Translator>
+}
+
+// Global Translator API Declaration
+declare global {
+  interface Window {
+    Translator?: TranslatorAPI
+  }
+  const Translator: TranslatorAPI | undefined
+}
+
+// Translation API Utility Functions
+export async function checkTranslatorAvailability(): Promise<boolean> {
+  if (typeof window === 'undefined' || !window.Translator) {
+    return false
+  }
+  return true
+}
+
+export async function checkLanguagePairAvailability(
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<TranslatorCapabilities> {
+  if (!checkTranslatorAvailability() || !window.Translator) {
+    return { available: 'no' }
+  }
+
+  try {
+    return await window.Translator.availability({
+      sourceLanguage,
+      targetLanguage,
+    })
+  } catch (error) {
+    console.error('Failed to check language pair availability:', error)
+    return { available: 'no' }
+  }
+}
+
+export async function createTranslator(
+  sourceLanguage: string,
+  targetLanguage: string,
+  monitor?: (monitor: DownloadMonitor) => void
+): Promise<Translator> {
+  if (!window.Translator) {
+    throw new AINotSupportedError('Translation API is not available')
+  }
+
+  const availability = await window.Translator.availability({
+    sourceLanguage,
+    targetLanguage,
+  })
+
+  if (availability.available === 'no') {
+    throw new AIModelUnavailableError(
+      `Translation from ${sourceLanguage} to ${targetLanguage} is not available`
+    )
+  }
+
+  return await window.Translator.create({
+    sourceLanguage,
+    targetLanguage,
+    monitor,
+  })
+}
+
+// Updated Translation Helpers using Chrome Translation API
 export async function translateToJapanese(
-  session: LanguageModelSession,
   text: string,
   signal?: AbortSignal
 ): Promise<string> {
-  const prompt = `Translate this text to Japanese (natural, conversational style):
+  try {
+    const translator = await createTranslator('en', 'ja')
+    try {
+      return await translator.translate(text)
+    } finally {
+      translator.destroy()
+    }
+  } catch (error) {
+    console.warn(
+      'Translation API not available, falling back to prompt-based translation:',
+      error
+    )
+    // Fallback to prompt-based translation if Translation API is not available
+    return fallbackTranslateToJapanese(text, signal)
+  }
+}
+
+export async function translateToEnglish(
+  text: string,
+  signal?: AbortSignal
+): Promise<string> {
+  try {
+    const translator = await createTranslator('ja', 'en')
+    try {
+      return await translator.translate(text)
+    } finally {
+      translator.destroy()
+    }
+  } catch (error) {
+    console.warn(
+      'Translation API not available, falling back to prompt-based translation:',
+      error
+    )
+    // Fallback to prompt-based translation if Translation API is not available
+    return fallbackTranslateToEnglish(text, signal)
+  }
+}
+
+// Multi-language translation function
+export async function translateText(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string,
+  signal?: AbortSignal
+): Promise<string> {
+  try {
+    const translator = await createTranslator(sourceLanguage, targetLanguage)
+    try {
+      return await translator.translate(text)
+    } finally {
+      translator.destroy()
+    }
+  } catch (error) {
+    console.warn(
+      `Translation API not available for ${sourceLanguage} to ${targetLanguage}, falling back to prompt-based translation:`,
+      error
+    )
+    // Fallback to prompt-based translation if Translation API is not available
+    return fallbackTranslateText(text, sourceLanguage, targetLanguage, signal)
+  }
+}
+
+// Fallback translation helpers using LanguageModel sessions (for backwards compatibility)
+async function fallbackTranslateToJapanese(
+  text: string,
+  signal?: AbortSignal
+): Promise<string> {
+  const session = await createLanguageModelSession({
+    temperature: 0.5,
+    topK: 10,
+    signal,
+    expectedInputs: [{ type: 'text', languages: ['en'] }],
+    expectedOutputs: [{ type: 'text', languages: ['ja'] }],
+  })
+
+  try {
+    const prompt = `Translate this text to Japanese (natural, conversational style):
 
 "${text}"
 
 Respond with only the Japanese translation, no additional text.`
 
-  return await session.prompt(prompt, { signal })
+    return await session.prompt(prompt, { signal })
+  } finally {
+    session.destroy()
+  }
 }
 
-// Japanese to English translation helper
-export async function translateToEnglish(
-  session: LanguageModelSession,
+async function fallbackTranslateToEnglish(
   text: string,
   signal?: AbortSignal
 ): Promise<string> {
-  const prompt = `Translate this Japanese text to English (natural, conversational style):
+  const session = await createLanguageModelSession({
+    temperature: 0.5,
+    topK: 10,
+    signal,
+    expectedInputs: [{ type: 'text', languages: ['ja'] }],
+    expectedOutputs: [{ type: 'text', languages: ['en'] }],
+  })
+
+  try {
+    const prompt = `Translate this Japanese text to English (natural, conversational style):
 
 "${text}"
 
 Respond with only the English translation, no additional text.`
 
-  return await session.prompt(prompt, { signal })
+    return await session.prompt(prompt, { signal })
+  } finally {
+    session.destroy()
+  }
+}
+
+async function fallbackTranslateText(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string,
+  signal?: AbortSignal
+): Promise<string> {
+  const session = await createLanguageModelSession({
+    temperature: 0.5,
+    topK: 10,
+    signal,
+    expectedInputs: [{ type: 'text', languages: [sourceLanguage] }],
+    expectedOutputs: [{ type: 'text', languages: [targetLanguage] }],
+  })
+
+  try {
+    const prompt = `Translate this text from ${sourceLanguage} to ${targetLanguage} (natural, conversational style):
+
+"${text}"
+
+Respond with only the translation, no additional text.`
+
+    return await session.prompt(prompt, { signal })
+  } finally {
+    session.destroy()
+  }
 }

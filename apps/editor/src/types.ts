@@ -60,3 +60,27 @@ export interface TranslationService {
   initialize(): Promise<void>
   destroy(): void
 }
+
+// Multi-language translation types
+export interface LanguagePair {
+  source: string
+  target: string
+  name: string
+}
+
+export interface TranslationRequest {
+  text: string
+  sourceLanguage: string
+  targetLanguage: string
+}
+
+export interface MultiLanguageTranslationService {
+  translate(request: TranslationRequest): Promise<string>
+  getAvailableLanguagePairs(): Promise<LanguagePair[]>
+  isLanguagePairSupported(
+    sourceLanguage: string,
+    targetLanguage: string
+  ): Promise<boolean>
+  initialize(): Promise<void>
+  destroy(): void
+}

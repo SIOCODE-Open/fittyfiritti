@@ -1,6 +1,7 @@
-import type { LanguageModelSession } from '@diai/built-in-ai-api'
+import type { Translator } from '@diai/built-in-ai-api'
 import {
-  createLanguageModelSession,
+  checkTranslatorAvailability,
+  createTranslator,
   translateToJapanese,
 } from '@diai/built-in-ai-api'
 import { TranslationService } from '../types'
@@ -13,47 +14,39 @@ interface TranslationJob {
 }
 
 export class TranslationServiceImpl implements TranslationService {
-  private session?: LanguageModelSession
+  private translator?: Translator
   private abortController?: AbortController
   private translationQueue: Array<TranslationJob> = []
   private isProcessing = false
   private activeJobs = new Map<string, Promise<string>>() // Track ongoing jobs by text
+  private isInitialized = false
 
   async initialize(): Promise<void> {
     try {
       this.abortController = new AbortController()
 
-      this.session = await createLanguageModelSession({
-        temperature: 0.5,
-        topK: 10,
-        signal: this.abortController.signal,
-        expectedInputs: [{ type: 'text', languages: ['en'] }],
-        expectedOutputs: [{ type: 'text', languages: ['ja'] }],
-        initialPrompts: [
-          {
-            role: 'system',
-            content: `You are a professional English to Japanese translator. 
+      // Check if Translation API is available
+      const isAvailable = await checkTranslatorAvailability()
+      if (isAvailable) {
+        // Pre-create translator for English to Japanese
+        this.translator = await createTranslator('en', 'ja')
+        console.log('🌐 Translation service initialized with Translator API')
+      } else {
+        console.log(
+          '🌐 Translation service initialized with fallback mode (Prompt API)'
+        )
+      }
 
-Guidelines:
-- Translate naturally and conversationally
-- Maintain the original meaning and tone
-- Use appropriate Japanese honorifics when needed
-- For technical terms, use commonly accepted Japanese equivalents
-- Keep translations concise but accurate
-- Respond with only the Japanese translation, no additional text`,
-          },
-        ],
-      })
-
-      console.log('🌐 Translation service initialized')
+      this.isInitialized = true
     } catch (error) {
       console.error('Failed to initialize translation service:', error)
-      throw error
+      // Don't throw error - fallback will be used automatically
+      this.isInitialized = true
     }
   }
 
   async translateToJapanese(text: string): Promise<string> {
-    if (!this.session) {
+    if (!this.isInitialized) {
       throw new Error('Translation service not initialized')
     }
 
@@ -107,10 +100,6 @@ Guidelines:
       if (!item) continue
 
       try {
-        if (!this.session) {
-          throw new Error('Translation service not initialized')
-        }
-
         // Check if we should skip this job (duplicate text already processed)
         const isDuplicate = this.translationQueue.some(
           queuedItem => queuedItem.text === item.text
@@ -124,8 +113,8 @@ Guidelines:
           continue
         }
 
+        // Use the new Translation API function which handles fallback automatically
         const translation = await translateToJapanese(
-          this.session,
           item.text,
           this.abortController?.signal
         )
@@ -171,12 +160,13 @@ Guidelines:
       this.abortController = undefined
     }
 
-    if (this.session) {
-      this.session.destroy()
-      this.session = undefined
+    if (this.translator) {
+      this.translator.destroy()
+      this.translator = undefined
     }
 
     this.isProcessing = false
+    this.isInitialized = false
 
     console.log('🔄 Translation service destroyed')
   }
