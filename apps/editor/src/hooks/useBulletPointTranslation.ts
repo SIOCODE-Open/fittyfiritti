@@ -44,17 +44,56 @@ export function useBulletPointTranslation(text: string) {
     activeJobs.add(jobKey)
     currentTextRef.current = text
 
-    setState(prev => ({ ...prev, isTranslating: true }))
+    setState(prev => ({ ...prev, isTranslating: true, textJa: '' }))
 
     try {
-      const translation = await translationService.translateToJapanese(text)
+      // Check if streaming is available, otherwise fall back to regular translation
+      if (translationService.translateToJapaneseStreaming) {
+        const stream =
+          await translationService.translateToJapaneseStreaming(text)
+        const reader = stream.getReader()
+        let accumulatedText = ''
 
-      // Only update state if this is still the current text and not aborted
-      if (!signal.aborted && currentTextRef.current === text) {
-        setState({
-          textJa: translation,
-          isTranslating: false,
-        })
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            // Check if aborted or text changed
+            if (signal.aborted || currentTextRef.current !== text) {
+              break
+            }
+
+            accumulatedText += value
+
+            // Update UI with streaming text
+            setState(prev => ({ ...prev, textJa: accumulatedText }))
+          }
+
+          // Mark translation as complete if not aborted and text hasn't changed
+          if (!signal.aborted && currentTextRef.current === text) {
+            setState(prev => ({ ...prev, isTranslating: false }))
+          }
+        } catch (streamError) {
+          if (!signal.aborted) {
+            console.error(
+              'Streaming bullet point translation failed:',
+              streamError
+            )
+            setState(prev => ({ ...prev, isTranslating: false }))
+          }
+        }
+      } else {
+        // Fallback to regular translation
+        const translation = await translationService.translateToJapanese(text)
+
+        // Only update state if this is still the current text and not aborted
+        if (!signal.aborted && currentTextRef.current === text) {
+          setState({
+            textJa: translation,
+            isTranslating: false,
+          })
+        }
       }
     } catch (error) {
       if (!signal.aborted) {

@@ -3,6 +3,7 @@ import {
   checkLanguagePairAvailability,
   checkTranslatorAvailability,
   translateText,
+  translateTextStreaming,
 } from '@diai/built-in-ai-api'
 
 // Supported language pairs configuration
@@ -38,8 +39,18 @@ export interface TranslationJob {
   jobId: string
 }
 
+export interface StreamingTranslationJob {
+  request: TranslationRequest
+  resolve: (stream: ReadableStream<string>) => void
+  reject: (error: Error) => void
+  jobId: string
+}
+
 export interface MultiLanguageTranslationService {
   translate(request: TranslationRequest): Promise<string>
+  translateStreaming?(
+    request: TranslationRequest
+  ): Promise<ReadableStream<string>>
   getAvailableLanguagePairs(): Promise<LanguagePair[]>
   isLanguagePairSupported(
     sourceLanguage: string,
@@ -55,8 +66,14 @@ export class MultiLanguageTranslationServiceImpl
   private translators = new Map<string, Translator>()
   private abortController?: AbortController
   private translationQueue: Array<TranslationJob> = []
+  private streamingQueue: Array<StreamingTranslationJob> = []
   private isProcessing = false
+  private isStreamingProcessing = false
   private activeJobs = new Map<string, Promise<string>>()
+  private activeStreamingJobs = new Map<
+    string,
+    Promise<ReadableStream<string>>
+  >()
   private isInitialized = false
   private availableLanguagePairs: LanguagePair[] = []
 
@@ -128,6 +145,153 @@ export class MultiLanguageTranslationServiceImpl
     return this.availableLanguagePairs.some(
       pair => pair.source === sourceLanguage && pair.target === targetLanguage
     )
+  }
+
+  async translateStreaming(
+    request: TranslationRequest
+  ): Promise<ReadableStream<string>> {
+    if (!this.isInitialized) {
+      throw new Error('Multi-language translation service not initialized')
+    }
+
+    const { text, sourceLanguage, targetLanguage } = request
+
+    if (!text.trim()) {
+      return new ReadableStream({
+        start(controller) {
+          controller.close()
+        },
+      })
+    }
+
+    // Check if this language pair is supported
+    const isSupported = await this.isLanguagePairSupported(
+      sourceLanguage,
+      targetLanguage
+    )
+    if (!isSupported) {
+      throw new Error(
+        `Translation from ${sourceLanguage} to ${targetLanguage} is not supported`
+      )
+    }
+
+    // Generate a unique key for this streaming translation job
+    const jobKey = `stream-${sourceLanguage}-${targetLanguage}-${text}`
+
+    // Check if this exact streaming translation is already being processed
+    const existingJob = this.activeStreamingJobs.get(jobKey)
+    if (existingJob) {
+      console.log(
+        `🔄 Reusing existing streaming translation job for ${sourceLanguage}→${targetLanguage}:`,
+        text.substring(0, 30) + '...'
+      )
+      return existingJob
+    }
+
+    // Create a new streaming translation promise and track it
+    const translationPromise = new Promise<ReadableStream<string>>(
+      (resolve, reject) => {
+        const jobId = Math.random().toString(36).substr(2, 9)
+
+        // Add to queue
+        this.streamingQueue.push({ request, resolve, reject, jobId })
+
+        // Process queue if not already processing
+        if (!this.isStreamingProcessing) {
+          this.processStreamingQueue()
+        }
+      }
+    )
+
+    // Track this job
+    this.activeStreamingJobs.set(jobKey, translationPromise)
+
+    // Clean up tracking when job completes
+    translationPromise.finally(() => {
+      this.activeStreamingJobs.delete(jobKey)
+    })
+
+    return translationPromise
+  }
+
+  private async processStreamingQueue(): Promise<void> {
+    if (this.streamingQueue.length === 0 || this.isStreamingProcessing) {
+      return
+    }
+
+    this.isStreamingProcessing = true
+
+    while (this.streamingQueue.length > 0) {
+      const item = this.streamingQueue.shift()
+      if (!item) continue
+
+      const { request } = item
+      const { text, sourceLanguage, targetLanguage } = request
+
+      try {
+        // Check if we should skip this job (duplicate text already processed)
+        const isDuplicate = this.streamingQueue.some(
+          queuedItem =>
+            queuedItem.request.text === text &&
+            queuedItem.request.sourceLanguage === sourceLanguage &&
+            queuedItem.request.targetLanguage === targetLanguage
+        )
+        if (isDuplicate) {
+          console.log(
+            `⏭️ Skipping duplicate streaming translation in queue (${sourceLanguage}→${targetLanguage}):`,
+            text.substring(0, 30) + '...'
+          )
+          item.resolve(
+            new ReadableStream({
+              start(controller) {
+                controller.close()
+              },
+            })
+          )
+          continue
+        }
+
+        // Use the new streaming Translation API function
+        const stream = await translateTextStreaming(
+          text,
+          sourceLanguage,
+          targetLanguage,
+          this.abortController?.signal
+        )
+
+        console.log(
+          `🌐 Streaming translation started (${sourceLanguage}→${targetLanguage}): "${text.substring(0, 30)}..."`
+        )
+        item.resolve(stream)
+      } catch (error) {
+        console.error(
+          `Streaming translation failed (${sourceLanguage}→${targetLanguage}):`,
+          error
+        )
+
+        // If it's an abort error, resolve with empty stream
+        if (error instanceof Error && error.name === 'AbortError') {
+          item.resolve(
+            new ReadableStream({
+              start(controller) {
+                controller.close()
+              },
+            })
+          )
+        } else {
+          item.reject(
+            error instanceof Error
+              ? error
+              : new Error('Streaming translation failed')
+          )
+        }
+      }
+
+      // Small delay between translations to avoid overwhelming the AI
+      await new Promise(resolve => setTimeout(resolve, 50))
+    }
+
+    this.isStreamingProcessing = false
   }
 
   async translate(request: TranslationRequest): Promise<string> {
@@ -264,8 +428,17 @@ export class MultiLanguageTranslationServiceImpl
       }
     }
 
+    // Reject all pending streaming translations
+    while (this.streamingQueue.length > 0) {
+      const item = this.streamingQueue.shift()
+      if (item) {
+        item.reject(new Error('Multi-language translation service destroyed'))
+      }
+    }
+
     // Clear active jobs
     this.activeJobs.clear()
+    this.activeStreamingJobs.clear()
 
     // Destroy all translators
     for (const translator of this.translators.values()) {
@@ -279,6 +452,7 @@ export class MultiLanguageTranslationServiceImpl
     }
 
     this.isProcessing = false
+    this.isStreamingProcessing = false
     this.isInitialized = false
     this.availableLanguagePairs = []
 

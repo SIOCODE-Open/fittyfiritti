@@ -227,18 +227,21 @@ function UnifiedCardItem({
       {shouldShowTranslations && (
         <>
           {card.isTranslating && (
-            <div className="flex items-center gap-3 pt-4 border-t border-opacity-30 border-white">
+            <div className="flex items-center gap-3 pt-4 border-t border-opacity-30 border-white mb-2">
               <Icon icon="mdi:translate" className="w-6 h-6 animate-pulse" />
               <span className="text-sm opacity-75">Translating...</span>
             </div>
           )}
-          {card.translatedText && !card.isTranslating && (
+          {card.translatedText && (
             <div className="pt-4 border-t border-opacity-30 border-white">
               <div className="text-xs opacity-75 mb-2 font-medium">
                 {getTranslationLabel(card.type)}:
               </div>
               <div className="text-lg leading-relaxed opacity-90">
                 {card.translatedText}
+                {card.isTranslating && (
+                  <span className="inline-block w-2 h-6 bg-white bg-opacity-60 ml-1 animate-pulse"></span>
+                )}
               </div>
             </div>
           )}

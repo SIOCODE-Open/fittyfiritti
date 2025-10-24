@@ -153,27 +153,31 @@ function SystemTranscriptionCardItem({
       {/* English Translation */}
       {card.text && (
         <div className="border-t border-purple-200 pt-3">
-          {card.isTranslating ? (
-            <div className="flex items-center space-x-2">
+          {card.isTranslating && (
+            <div className="flex items-center space-x-2 mb-2">
               <div className="w-4 h-4 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
               <span className="text-sm text-gray-500 italic">
                 Translating to English...
               </span>
             </div>
-          ) : card.textEn ? (
+          )}
+          {card.textEn ? (
             <div>
               <div className="text-xs text-gray-500 mb-1 font-medium">
                 English Translation:
               </div>
               <p className="text-gray-800 text-sm leading-relaxed">
                 {card.textEn}
+                {card.isTranslating && (
+                  <span className="inline-block w-1 h-4 bg-blue-600 ml-1 animate-pulse"></span>
+                )}
               </p>
             </div>
-          ) : (
+          ) : !card.isTranslating ? (
             <div className="text-sm text-gray-400 italic">
               Translation pending...
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>

@@ -57,6 +57,7 @@ export interface TranscriptionService {
 
 export interface TranslationService {
   translateToJapanese(text: string): Promise<string>
+  translateToJapaneseStreaming?(text: string): Promise<ReadableStream<string>>
   initialize(): Promise<void>
   destroy(): void
 }
@@ -76,6 +77,9 @@ export interface TranslationRequest {
 
 export interface MultiLanguageTranslationService {
   translate(request: TranslationRequest): Promise<string>
+  translateStreaming?(
+    request: TranslationRequest
+  ): Promise<ReadableStream<string>>
   getAvailableLanguagePairs(): Promise<LanguagePair[]>
   isLanguagePairSupported(
     sourceLanguage: string,

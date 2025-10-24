@@ -50,12 +50,18 @@ export const SubjectCard = forwardRef<SubjectCardRef, SubjectCardProps>(
             {isTranslating && (
               <div className="flex items-center gap-1 text-xs text-blue-600">
                 <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <span>Translating...</span>
               </div>
             )}
           </div>
 
           {titleJa && (
-            <h3 className="text-3xl text-gray-800 mb-4">{titleJa}</h3>
+            <h3 className="text-3xl text-gray-800 mb-4">
+              {titleJa}
+              {isTranslating && (
+                <span className="inline-block w-2 h-8 bg-blue-600 ml-2 animate-pulse"></span>
+              )}
+            </h3>
           )}
         </div>
 

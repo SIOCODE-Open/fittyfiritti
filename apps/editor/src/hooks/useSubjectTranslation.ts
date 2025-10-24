@@ -44,17 +44,53 @@ export function useSubjectTranslation(title: string) {
     activeJobs.add(jobKey)
     currentTitleRef.current = title
 
-    setState(prev => ({ ...prev, isTranslating: true }))
+    setState(prev => ({ ...prev, isTranslating: true, titleJa: '' }))
 
     try {
-      const translation = await translationService.translateToJapanese(title)
+      // Check if streaming is available, otherwise fall back to regular translation
+      if (translationService.translateToJapaneseStreaming) {
+        const stream =
+          await translationService.translateToJapaneseStreaming(title)
+        const reader = stream.getReader()
+        let accumulatedText = ''
 
-      // Only update state if this is still the current title and not aborted
-      if (!signal.aborted && currentTitleRef.current === title) {
-        setState({
-          titleJa: translation,
-          isTranslating: false,
-        })
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            // Check if aborted or title changed
+            if (signal.aborted || currentTitleRef.current !== title) {
+              break
+            }
+
+            accumulatedText += value
+
+            // Update UI with streaming text
+            setState(prev => ({ ...prev, titleJa: accumulatedText }))
+          }
+
+          // Mark translation as complete if not aborted and title hasn't changed
+          if (!signal.aborted && currentTitleRef.current === title) {
+            setState(prev => ({ ...prev, isTranslating: false }))
+          }
+        } catch (streamError) {
+          if (!signal.aborted) {
+            console.error('Streaming subject translation failed:', streamError)
+            setState(prev => ({ ...prev, isTranslating: false }))
+          }
+        }
+      } else {
+        // Fallback to regular translation
+        const translation = await translationService.translateToJapanese(title)
+
+        // Only update state if this is still the current title and not aborted
+        if (!signal.aborted && currentTitleRef.current === title) {
+          setState({
+            titleJa: translation,
+            isTranslating: false,
+          })
+        }
       }
     } catch (error) {
       if (!signal.aborted) {

@@ -94,7 +94,7 @@ export function MainApplication() {
     return new Blob([buffer], { type: 'audio/wav' })
   }, [])
 
-  // Async translation helper with job deduplication
+  // Async translation helper with streaming and job deduplication
   const translateTextAsync = useCallback(
     (cardId: string, text: string) => {
       // Only translate if languages differ
@@ -105,36 +105,93 @@ export function MainApplication() {
       setAppState(prev => ({
         ...prev,
         transcriptionCards: prev.transcriptionCards.map(card =>
-          card.id === cardId ? { ...card, isTranslating: true } : card
+          card.id === cardId
+            ? { ...card, isTranslating: true, textJa: '' }
+            : card
         ),
       }))
 
-      translationService
-        .translateToJapanese(text)
-        .then(translation => {
-          setAppState(prev => ({
-            ...prev,
-            transcriptionCards: prev.transcriptionCards.map(card =>
-              card.id === cardId
-                ? { ...card, textJa: translation, isTranslating: false }
-                : card
-            ),
-          }))
-        })
-        .catch(error => {
-          console.error('Translation failed:', error)
-          setAppState(prev => ({
-            ...prev,
-            transcriptionCards: prev.transcriptionCards.map(card =>
-              card.id === cardId ? { ...card, isTranslating: false } : card
-            ),
-          }))
-        })
+      // Check if streaming is available, otherwise fall back to regular translation
+      if (translationService.translateToJapaneseStreaming) {
+        translationService
+          .translateToJapaneseStreaming(text)
+          .then(async stream => {
+            const reader = stream.getReader()
+            let accumulatedText = ''
+
+            try {
+              while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+
+                accumulatedText += value
+
+                // Update UI with streaming text
+                setAppState(prev => ({
+                  ...prev,
+                  transcriptionCards: prev.transcriptionCards.map(card =>
+                    card.id === cardId
+                      ? { ...card, textJa: accumulatedText }
+                      : card
+                  ),
+                }))
+              }
+
+              // Mark translation as complete
+              setAppState(prev => ({
+                ...prev,
+                transcriptionCards: prev.transcriptionCards.map(card =>
+                  card.id === cardId ? { ...card, isTranslating: false } : card
+                ),
+              }))
+            } catch (error) {
+              console.error('Streaming translation failed:', error)
+              setAppState(prev => ({
+                ...prev,
+                transcriptionCards: prev.transcriptionCards.map(card =>
+                  card.id === cardId ? { ...card, isTranslating: false } : card
+                ),
+              }))
+            }
+          })
+          .catch(error => {
+            console.error('Failed to start streaming translation:', error)
+            setAppState(prev => ({
+              ...prev,
+              transcriptionCards: prev.transcriptionCards.map(card =>
+                card.id === cardId ? { ...card, isTranslating: false } : card
+              ),
+            }))
+          })
+      } else {
+        // Fallback to regular translation
+        translationService
+          .translateToJapanese(text)
+          .then(translation => {
+            setAppState(prev => ({
+              ...prev,
+              transcriptionCards: prev.transcriptionCards.map(card =>
+                card.id === cardId
+                  ? { ...card, textJa: translation, isTranslating: false }
+                  : card
+              ),
+            }))
+          })
+          .catch(error => {
+            console.error('Translation failed:', error)
+            setAppState(prev => ({
+              ...prev,
+              transcriptionCards: prev.transcriptionCards.map(card =>
+                card.id === cardId ? { ...card, isTranslating: false } : card
+              ),
+            }))
+          })
+      }
     },
     [translationService, speakerLanguage, otherPartyLanguage]
   )
 
-  // System translation helper (Japanese to English)
+  // System translation helper (Japanese to English) with streaming
   const translateSystemTextAsync = useCallback(
     (cardId: string, text: string) => {
       // Only translate if languages differ
@@ -145,31 +202,101 @@ export function MainApplication() {
       setAppState(prev => ({
         ...prev,
         systemTranscriptionCards: prev.systemTranscriptionCards.map(card =>
-          card.id === cardId ? { ...card, isTranslating: true } : card
+          card.id === cardId
+            ? { ...card, isTranslating: true, textEn: '' }
+            : card
         ),
       }))
 
-      systemTranslationService
-        .translateToEnglish(text)
-        .then(translation => {
-          setAppState(prev => ({
-            ...prev,
-            systemTranscriptionCards: prev.systemTranscriptionCards.map(card =>
-              card.id === cardId
-                ? { ...card, textEn: translation, isTranslating: false }
-                : card
-            ),
-          }))
-        })
-        .catch(error => {
-          console.error('System translation failed:', error)
-          setAppState(prev => ({
-            ...prev,
-            systemTranscriptionCards: prev.systemTranscriptionCards.map(card =>
-              card.id === cardId ? { ...card, isTranslating: false } : card
-            ),
-          }))
-        })
+      // Check if streaming is available, otherwise fall back to regular translation
+      if (systemTranslationService.translateToEnglishStreaming) {
+        systemTranslationService
+          .translateToEnglishStreaming(text)
+          .then(async stream => {
+            const reader = stream.getReader()
+            let accumulatedText = ''
+
+            try {
+              while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+
+                accumulatedText += value
+
+                // Update UI with streaming text
+                setAppState(prev => ({
+                  ...prev,
+                  systemTranscriptionCards: prev.systemTranscriptionCards.map(
+                    card =>
+                      card.id === cardId
+                        ? { ...card, textEn: accumulatedText }
+                        : card
+                  ),
+                }))
+              }
+
+              // Mark translation as complete
+              setAppState(prev => ({
+                ...prev,
+                systemTranscriptionCards: prev.systemTranscriptionCards.map(
+                  card =>
+                    card.id === cardId
+                      ? { ...card, isTranslating: false }
+                      : card
+                ),
+              }))
+            } catch (error) {
+              console.error('Streaming system translation failed:', error)
+              setAppState(prev => ({
+                ...prev,
+                systemTranscriptionCards: prev.systemTranscriptionCards.map(
+                  card =>
+                    card.id === cardId
+                      ? { ...card, isTranslating: false }
+                      : card
+                ),
+              }))
+            }
+          })
+          .catch(error => {
+            console.error(
+              'Failed to start streaming system translation:',
+              error
+            )
+            setAppState(prev => ({
+              ...prev,
+              systemTranscriptionCards: prev.systemTranscriptionCards.map(
+                card =>
+                  card.id === cardId ? { ...card, isTranslating: false } : card
+              ),
+            }))
+          })
+      } else {
+        // Fallback to regular translation
+        systemTranslationService
+          .translateToEnglish(text)
+          .then(translation => {
+            setAppState(prev => ({
+              ...prev,
+              systemTranscriptionCards: prev.systemTranscriptionCards.map(
+                card =>
+                  card.id === cardId
+                    ? { ...card, textEn: translation, isTranslating: false }
+                    : card
+              ),
+            }))
+          })
+          .catch(error => {
+            console.error('System translation failed:', error)
+            setAppState(prev => ({
+              ...prev,
+              systemTranscriptionCards: prev.systemTranscriptionCards.map(
+                card =>
+                  card.id === cardId ? { ...card, isTranslating: false } : card
+              ),
+            }))
+          })
+      }
     },
     [systemTranslationService, speakerLanguage, otherPartyLanguage]
   )
@@ -294,6 +421,13 @@ export function MainApplication() {
         if (speakerLanguage !== otherPartyLanguage) {
           translateSystemTextAsync(loadingCardId, transcription)
         }
+
+        // Publish completed system transcription for subject analysis
+        publishTranscription({
+          id: loadingCardId,
+          text: transcription,
+          timestamp: Date.now(),
+        })
       } catch (error) {
         console.error('Failed to process system audio chunk:', error)
         setError('Failed to process system audio. Please try again.')
@@ -302,6 +436,7 @@ export function MainApplication() {
     [
       systemTranscriptionService,
       translateSystemTextAsync,
+      publishTranscription,
       speakerLanguage,
       otherPartyLanguage,
     ]

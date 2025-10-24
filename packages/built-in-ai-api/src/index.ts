@@ -598,3 +598,348 @@ Respond with only the translation, no additional text.`
     session.destroy()
   }
 }
+
+// Fallback streaming translation helpers using LanguageModel sessions
+async function fallbackTranslateToJapaneseStreaming(
+  text: string,
+  signal?: AbortSignal
+): Promise<ReadableStream<string>> {
+  const session = await createLanguageModelSession({
+    temperature: 0.5,
+    topK: 10,
+    signal,
+    expectedInputs: [{ type: 'text', languages: ['en'] }],
+    expectedOutputs: [{ type: 'text', languages: ['ja'] }],
+  })
+
+  const prompt = `Translate this text to Japanese (natural, conversational style):
+
+"${text}"
+
+Respond with only the Japanese translation, no additional text.`
+
+  const stream = session.promptStreaming(prompt, { signal })
+
+  return new ReadableStream({
+    start(controller) {
+      const reader = stream.getReader()
+
+      const pump = async (): Promise<void> => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) {
+              session.destroy()
+              controller.close()
+              break
+            }
+            controller.enqueue(value)
+          }
+        } catch (error) {
+          session.destroy()
+          controller.error(error)
+        }
+      }
+
+      pump()
+    },
+    cancel() {
+      session.destroy()
+    },
+  })
+}
+
+async function fallbackTranslateToEnglishStreaming(
+  text: string,
+  signal?: AbortSignal
+): Promise<ReadableStream<string>> {
+  const session = await createLanguageModelSession({
+    temperature: 0.5,
+    topK: 10,
+    signal,
+    expectedInputs: [{ type: 'text', languages: ['ja'] }],
+    expectedOutputs: [{ type: 'text', languages: ['en'] }],
+  })
+
+  const prompt = `Translate this Japanese text to English (natural, conversational style):
+
+"${text}"
+
+Respond with only the English translation, no additional text.`
+
+  const stream = session.promptStreaming(prompt, { signal })
+
+  return new ReadableStream({
+    start(controller) {
+      const reader = stream.getReader()
+
+      const pump = async (): Promise<void> => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) {
+              session.destroy()
+              controller.close()
+              break
+            }
+            controller.enqueue(value)
+          }
+        } catch (error) {
+          session.destroy()
+          controller.error(error)
+        }
+      }
+
+      pump()
+    },
+    cancel() {
+      session.destroy()
+    },
+  })
+}
+
+async function fallbackTranslateTextStreaming(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string,
+  signal?: AbortSignal
+): Promise<ReadableStream<string>> {
+  const session = await createLanguageModelSession({
+    temperature: 0.5,
+    topK: 10,
+    signal,
+    expectedInputs: [{ type: 'text', languages: [sourceLanguage] }],
+    expectedOutputs: [{ type: 'text', languages: [targetLanguage] }],
+  })
+
+  const prompt = `Translate this text from ${sourceLanguage} to ${targetLanguage} (natural, conversational style):
+
+"${text}"
+
+Respond with only the translation, no additional text.`
+
+  const stream = session.promptStreaming(prompt, { signal })
+
+  return new ReadableStream({
+    start(controller) {
+      const reader = stream.getReader()
+
+      const pump = async (): Promise<void> => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) {
+              session.destroy()
+              controller.close()
+              break
+            }
+            controller.enqueue(value)
+          }
+        } catch (error) {
+          session.destroy()
+          controller.error(error)
+        }
+      }
+
+      pump()
+    },
+    cancel() {
+      session.destroy()
+    },
+  })
+}
+
+// Streaming translation functions
+export async function translateToJapaneseStreaming(
+  text: string,
+  signal?: AbortSignal
+): Promise<ReadableStream<string>> {
+  try {
+    const translator = await createTranslator('en', 'ja')
+    // Note: We need to handle cleanup differently for streams
+    const stream = translator.translateStreaming(text)
+
+    // Create a new stream that cleans up the translator when done
+    return new ReadableStream({
+      start(controller) {
+        const reader = stream.getReader()
+
+        const pump = async (): Promise<void> => {
+          try {
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) {
+                translator.destroy()
+                controller.close()
+                break
+              }
+              controller.enqueue(value)
+            }
+          } catch (error) {
+            translator.destroy()
+            controller.error(error)
+          }
+        }
+
+        pump()
+      },
+      cancel() {
+        translator.destroy()
+      },
+    })
+  } catch (error) {
+    console.warn(
+      'Translation API not available, falling back to prompt-based streaming translation:',
+      error
+    )
+    return fallbackTranslateToJapaneseStreaming(text, signal)
+  }
+}
+
+export async function translateToEnglishStreaming(
+  text: string,
+  signal?: AbortSignal
+): Promise<ReadableStream<string>> {
+  try {
+    const translator = await createTranslator('ja', 'en')
+    const stream = translator.translateStreaming(text)
+
+    return new ReadableStream({
+      start(controller) {
+        const reader = stream.getReader()
+
+        const pump = async (): Promise<void> => {
+          try {
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) {
+                translator.destroy()
+                controller.close()
+                break
+              }
+              controller.enqueue(value)
+            }
+          } catch (error) {
+            translator.destroy()
+            controller.error(error)
+          }
+        }
+
+        pump()
+      },
+      cancel() {
+        translator.destroy()
+      },
+    })
+  } catch (error) {
+    console.warn(
+      'Translation API not available, falling back to prompt-based streaming translation:',
+      error
+    )
+    return fallbackTranslateToEnglishStreaming(text, signal)
+  }
+}
+
+export async function translateTextStreaming(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string,
+  signal?: AbortSignal
+): Promise<ReadableStream<string>> {
+  try {
+    const translator = await createTranslator(sourceLanguage, targetLanguage)
+    const stream = translator.translateStreaming(text)
+
+    return new ReadableStream({
+      start(controller) {
+        const reader = stream.getReader()
+
+        const pump = async (): Promise<void> => {
+          try {
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) {
+                translator.destroy()
+                controller.close()
+                break
+              }
+              controller.enqueue(value)
+            }
+          } catch (error) {
+            translator.destroy()
+            controller.error(error)
+          }
+        }
+
+        pump()
+      },
+      cancel() {
+        translator.destroy()
+      },
+    })
+  } catch (error) {
+    console.warn(
+      `Translation API not available for ${sourceLanguage} to ${targetLanguage}, falling back to prompt-based streaming translation:`,
+      error
+    )
+    return fallbackTranslateTextStreaming(
+      text,
+      sourceLanguage,
+      targetLanguage,
+      signal
+    )
+  }
+}
+
+// Intent recognition with streaming for note organization
+export async function recognizeIntentStreaming(
+  session: LanguageModelSession,
+  transcription: string,
+  context?: string,
+  signal?: AbortSignal
+): Promise<ReadableStream<string>> {
+  const schema: JSONSchema = {
+    type: 'object',
+    properties: {
+      level: {
+        type: 'number',
+        enum: [1, 2, 3, 4], // 4 = transition
+      },
+      title: {
+        type: 'string',
+      },
+      content: {
+        type: 'string',
+      },
+      isTransition: {
+        type: 'boolean',
+      },
+      transitionMessage: {
+        type: 'string',
+      },
+    },
+    required: ['level', 'content'],
+  }
+
+  const prompt = `Analyze this transcription and classify the intent:
+
+Context: ${context || 'None'}
+Transcription: "${transcription}"
+
+Classification levels:
+- Level 1: Complete subject change (new topic) - clears previous content
+- Level 2: New aspect of current subject (new card with title)  
+- Level 3: Continue current discussion (bullet point)
+- Level 4: Transitional phrase (moving between topics)
+
+For Level 1 & 2: Provide a concise title
+For Level 3: Summarize as a bullet point
+For Level 4: Provide a transition message like "Moving on..." or "Continuing..."
+
+Respond with structured JSON.`
+
+  return session.promptStreaming(prompt, {
+    responseConstraint: schema,
+    signal,
+  })
+}

@@ -39,16 +39,20 @@ export function TranscriptionCards({
 
               {/* Translation section */}
               {card.isTranslating && (
-                <div className="text-green-600 flex items-center gap-3">
+                <div className="text-green-600 flex items-center gap-3 mb-4">
                   <Icon
                     icon="mdi:translate"
-                    className="w-12 h-12 animate-pulse"
+                    className="w-6 h-6 animate-pulse"
                   />
+                  <span className="text-lg">Translating...</span>
                 </div>
               )}
-              {card.textJa && !card.isTranslating && (
+              {card.textJa && (
                 <div className="text-green-700 text-2xl pt-4 border-t border-gray-200 leading-relaxed">
                   {card.textJa}
+                  {card.isTranslating && (
+                    <span className="inline-block w-2 h-6 bg-green-600 ml-1 animate-pulse"></span>
+                  )}
                 </div>
               )}
             </div>
