@@ -378,3 +378,18 @@ Respond with only the Japanese translation, no additional text.`
 
   return await session.prompt(prompt, { signal })
 }
+
+// Japanese to English translation helper
+export async function translateToEnglish(
+  session: LanguageModelSession,
+  text: string,
+  signal?: AbortSignal
+): Promise<string> {
+  const prompt = `Translate this Japanese text to English (natural, conversational style):
+
+"${text}"
+
+Respond with only the English translation, no additional text.`
+
+  return await session.prompt(prompt, { signal })
+}

@@ -9,12 +9,25 @@ export interface TranscriptionCard {
   waveformData?: number[] // Waveform amplitude data
 }
 
+// System Audio Transcription Card (Japanese->English)
+export interface SystemTranscriptionCard {
+  id: string
+  text?: string // Japanese text - Optional since it starts as loading
+  textEn?: string // English translation
+  timestamp: number
+  isTranscribing?: boolean
+  isTranslating?: boolean
+  waveformData?: number[] // Waveform amplitude data
+}
+
 // Application State
 export interface AppState {
   isRecording: boolean
   currentTranscription: string
   transcriptionCards: TranscriptionCard[]
+  systemTranscriptionCards: SystemTranscriptionCard[]
   liveWaveformData: number[] // Live waveform for current recording
+  isSystemCapturing: boolean
 }
 
 // Audio Processing

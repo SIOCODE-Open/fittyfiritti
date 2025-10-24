@@ -1,32 +1,47 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSystemAudio } from '../contexts/SystemAudioContext'
+import { useSystemTranscription } from '../contexts/SystemTranscriptionContext'
+import { useSystemTranslation } from '../contexts/SystemTranslationContext'
 import { useTranscription } from '../contexts/TranscriptionContext'
 import { useTranscriptionEvents } from '../contexts/TranscriptionEventsContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useVAD } from '../contexts/VADContext'
-import { AppState, AudioChunk, TranscriptionCard } from '../types'
+import {
+  AppState,
+  AudioChunk,
+  SystemTranscriptionCard,
+  TranscriptionCard,
+} from '../types'
 import { ErrorDisplay } from './ErrorDisplay'
 import { RecordingControlPanel } from './RecordingControlPanel'
 import { SubjectDisplay } from './SubjectDisplay'
+import { SystemTranscriptionCards } from './SystemTranscriptionCards'
 import { TranscriptionCards } from './TranscriptionCards'
 import { WelcomeScreen } from './WelcomeScreen'
 
 export function MainApplication() {
   const transcriptionService = useTranscription()
   const translationService = useTranslation()
+  const systemTranscriptionService = useSystemTranscription()
+  const systemTranslationService = useSystemTranslation()
   const { publishTranscription } = useTranscriptionEvents()
   const vad = useVAD()
+  const systemAudio = useSystemAudio()
 
   const [appState, setAppState] = useState<AppState>({
     isRecording: false,
     currentTranscription: '',
     transcriptionCards: [],
+    systemTranscriptionCards: [],
     liveWaveformData: [],
+    isSystemCapturing: false,
   })
 
   const [isInitializing, setIsInitializing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasStartedRecording, setHasStartedRecording] = useState(false)
   const currentLoadingCardId = useRef<string | null>(null)
+  const currentSystemLoadingCardId = useRef<string | null>(null)
 
   // Generate unique IDs
   const generateId = useCallback(
@@ -112,6 +127,41 @@ export function MainApplication() {
     [translationService]
   )
 
+  // System translation helper (Japanese to English)
+  const translateSystemTextAsync = useCallback(
+    (cardId: string, text: string) => {
+      setAppState(prev => ({
+        ...prev,
+        systemTranscriptionCards: prev.systemTranscriptionCards.map(card =>
+          card.id === cardId ? { ...card, isTranslating: true } : card
+        ),
+      }))
+
+      systemTranslationService
+        .translateToEnglish(text)
+        .then(translation => {
+          setAppState(prev => ({
+            ...prev,
+            systemTranscriptionCards: prev.systemTranscriptionCards.map(card =>
+              card.id === cardId
+                ? { ...card, textEn: translation, isTranslating: false }
+                : card
+            ),
+          }))
+        })
+        .catch(error => {
+          console.error('System translation failed:', error)
+          setAppState(prev => ({
+            ...prev,
+            systemTranscriptionCards: prev.systemTranscriptionCards.map(card =>
+              card.id === cardId ? { ...card, isTranslating: false } : card
+            ),
+          }))
+        })
+    },
+    [systemTranslationService]
+  )
+
   const handleAudioChunk = useCallback(
     async (chunk: AudioChunk) => {
       try {
@@ -173,6 +223,63 @@ export function MainApplication() {
     [transcriptionService, translateTextAsync, publishTranscription]
   )
 
+  // Handle system audio chunks (Japanese transcription)
+  const handleSystemAudioChunk = useCallback(
+    async (chunk: AudioChunk) => {
+      try {
+        // Use the ref to find the correct loading card
+        const loadingCardId = currentSystemLoadingCardId.current
+
+        if (!loadingCardId) {
+          console.warn('No system loading card ID available for audio chunk')
+          return
+        }
+
+        // Clear the ref since we're processing this card
+        currentSystemLoadingCardId.current = null
+
+        // Transcribe audio as Japanese
+        const transcription = await systemTranscriptionService.transcribe(
+          chunk.blob
+        )
+
+        if (!transcription.trim()) {
+          // If transcription is empty, remove the loading card
+          setAppState(prev => ({
+            ...prev,
+            systemTranscriptionCards: prev.systemTranscriptionCards.filter(
+              card => card.id !== loadingCardId
+            ),
+          }))
+          return
+        }
+
+        // Update the loading card with Japanese transcription
+        setAppState(prev => ({
+          ...prev,
+          systemTranscriptionCards: prev.systemTranscriptionCards.map(card =>
+            card.id === loadingCardId
+              ? {
+                  ...card,
+                  text: transcription,
+                  isTranscribing: false,
+                  isTranslating: true,
+                  waveformData: chunk.waveformData || card.waveformData,
+                }
+              : card
+          ),
+        }))
+
+        // Start async translation to English
+        translateSystemTextAsync(loadingCardId, transcription)
+      } catch (error) {
+        console.error('Failed to process system audio chunk:', error)
+        setError('Failed to process system audio. Please try again.')
+      }
+    },
+    [systemTranscriptionService, translateSystemTextAsync]
+  )
+
   // Handle VAD speech detection
   const handleSpeechEnd = useCallback(
     async (audioData: Float32Array) => {
@@ -218,6 +325,39 @@ export function MainApplication() {
     [generateId, convertAudioToBlob, handleAudioChunk]
   )
 
+  // Handle system audio segment completion
+  const handleSystemAudioSegment = useCallback(
+    async (audioChunk: AudioChunk) => {
+      try {
+        console.log('🖥️ Processing system audio segment')
+
+        // Create a loading card immediately
+        const cardId = generateId()
+        const newCard: SystemTranscriptionCard = {
+          id: cardId,
+          timestamp: Date.now(),
+          isTranscribing: true,
+          waveformData: audioChunk.waveformData || [],
+        }
+
+        // Store the card ID for the audio processing
+        currentSystemLoadingCardId.current = cardId
+
+        setAppState(prev => ({
+          ...prev,
+          systemTranscriptionCards: [...prev.systemTranscriptionCards, newCard],
+        }))
+
+        // Process the audio chunk
+        await handleSystemAudioChunk(audioChunk)
+      } catch (error) {
+        console.error('Failed to process system audio segment:', error)
+        setError('Failed to process system audio. Please try again.')
+      }
+    },
+    [generateId, handleSystemAudioChunk]
+  )
+
   const handleSpeechStart = useCallback(() => {
     console.log('🗣️ Speech started')
     // Could add visual feedback here
@@ -256,6 +396,37 @@ export function MainApplication() {
     }
   }
 
+  // Start system audio capture
+  const handleStartSystemCapture = async () => {
+    try {
+      setIsInitializing(true)
+      setError(null)
+
+      // Initialize system services
+      await Promise.all([
+        systemTranscriptionService.initialize(),
+        systemTranslationService.initialize(),
+      ])
+
+      // Set up system audio callbacks
+      systemAudio.onAudioSegment(handleSystemAudioSegment)
+
+      // Start system audio capture
+      await systemAudio.start()
+
+      setAppState(prev => ({ ...prev, isSystemCapturing: true }))
+      setIsInitializing(false)
+
+      console.log('🖥️ System audio capture started successfully')
+    } catch (error) {
+      console.error('Failed to start system audio capture:', error)
+      setError(
+        'Failed to start screen sharing. Please check permissions and ensure audio is enabled.'
+      )
+      setIsInitializing(false)
+    }
+  }
+
   // Handle stopping recording
   const handleStopRecording = () => {
     try {
@@ -275,17 +446,41 @@ export function MainApplication() {
     }
   }
 
+  // Handle stopping system capture
+  const handleStopSystemCapture = () => {
+    try {
+      // Stop system audio capture
+      systemAudio.stop()
+
+      setAppState(prev => ({
+        ...prev,
+        isSystemCapturing: false,
+      }))
+
+      console.log('🛑 System audio capture stopped')
+    } catch (error) {
+      console.error('Failed to stop system capture:', error)
+      setError('Failed to stop system capture.')
+    }
+  }
+
   // Cleanup services on unmount only
   useEffect(() => {
     return () => {
       // Capture current values at cleanup time to avoid stale closures
       const currentVad = vad
+      const currentSystemAudio = systemAudio
       const currentTranscriptionService = transcriptionService
       const currentTranslationService = translationService
+      const currentSystemTranscriptionService = systemTranscriptionService
+      const currentSystemTranslationService = systemTranslationService
 
       currentVad.pause()
+      currentSystemAudio.stop()
       currentTranscriptionService.destroy()
       currentTranslationService.destroy()
+      currentSystemTranscriptionService.destroy()
+      currentSystemTranslationService.destroy()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run on mount/unmount
@@ -297,17 +492,31 @@ export function MainApplication() {
       {/* Main Content Container */}
       <div className="w-full px-6 py-8">
         {/* When not recording AND never started recording: Show huge record button in center */}
-        {!appState.isRecording && !hasStartedRecording && (
-          <WelcomeScreen
-            onStartRecording={handleStartRecording}
-            isInitializing={isInitializing}
-          />
-        )}
+        {!appState.isRecording &&
+          !hasStartedRecording &&
+          !appState.isSystemCapturing && (
+            <WelcomeScreen
+              onStartRecording={handleStartRecording}
+              isInitializing={isInitializing}
+            />
+          )}
 
-        {/* When recording OR has started recording: Show split layout */}
-        {(appState.isRecording || hasStartedRecording) && (
+        {/* When recording OR has started recording OR system capturing: Show three-column layout */}
+        {(appState.isRecording ||
+          hasStartedRecording ||
+          appState.isSystemCapturing) && (
           <div className="flex gap-6 h-[calc(100vh-12rem)]">
-            {/* Left Side - Transcription Cards (50%) */}
+            {/* Left Side - System Audio Transcription Cards (33%) */}
+            <div className="flex-1">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
+                <SystemTranscriptionCards
+                  systemTranscriptionCards={appState.systemTranscriptionCards}
+                  isCapturing={appState.isSystemCapturing}
+                />
+              </div>
+            </div>
+
+            {/* Center - Microphone Transcription Cards (33%) */}
             <div className="flex-1">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
                 <TranscriptionCards
@@ -317,7 +526,7 @@ export function MainApplication() {
               </div>
             </div>
 
-            {/* Right Side - Subject Analysis (50%) */}
+            {/* Right Side - Subject Analysis (33%) */}
             <div className="flex-1">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
                 <SubjectDisplay />
@@ -328,13 +537,17 @@ export function MainApplication() {
       </div>
 
       {/* Floating Panel at Bottom - Shows when recording has been started */}
-      {hasStartedRecording && (
+      {(hasStartedRecording || appState.isSystemCapturing) && (
         <RecordingControlPanel
           isRecording={appState.isRecording}
+          isSystemCapturing={appState.isSystemCapturing}
           onStartRecording={handleStartRecording}
           onStopRecording={handleStopRecording}
+          onStartSystemCapture={handleStartSystemCapture}
+          onStopSystemCapture={handleStopSystemCapture}
           isInitializing={isInitializing}
           userSpeaking={vad.userSpeaking}
+          hasSystemAudio={systemAudio.systemSpeaking}
         />
       )}
     </div>
