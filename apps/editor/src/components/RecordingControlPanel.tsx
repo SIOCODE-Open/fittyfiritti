@@ -7,6 +7,7 @@ interface RecordingControlPanelProps {
   onStopRecording: () => void
   onStartSystemCapture?: () => void
   onStopSystemCapture?: () => void
+  onEndSession?: () => void
   isInitializing: boolean
   userSpeaking: boolean
   hasSystemAudio?: boolean
@@ -19,6 +20,7 @@ export function RecordingControlPanel({
   onStopRecording,
   onStartSystemCapture,
   onStopSystemCapture,
+  onEndSession,
   isInitializing,
   userSpeaking,
   hasSystemAudio = false,
@@ -37,20 +39,27 @@ export function RecordingControlPanel({
                     icon="mdi:microphone"
                     className="w-8 h-8 text-red-500 animate-pulse"
                   />
-                  <Icon
-                    icon="mdi:account-voice"
-                    className={`w-6 h-6 ${userSpeaking ? 'text-green-500' : 'text-gray-400'}`}
-                  />
+                  <div title={userSpeaking ? 'Speaking' : 'Not speaking'}>
+                    <Icon
+                      icon="mdi:account-voice"
+                      className={`w-7 h-7 ${userSpeaking ? 'text-blue-600' : 'text-gray-300'}`}
+                    />
+                  </div>
                 </>
               ) : (
-                <Icon
-                  icon="mdi:microphone-off"
-                  className="w-8 h-8 text-gray-400"
-                />
+                <>
+                  <Icon
+                    icon="mdi:microphone-off"
+                    className="w-8 h-8 text-gray-400"
+                  />
+                  <div title="Not speaking">
+                    <Icon
+                      icon="mdi:account-voice"
+                      className="w-7 h-7 text-gray-300"
+                    />
+                  </div>
+                </>
               )}
-              <span className="text-sm text-gray-600 font-medium">
-                {isRecording ? 'Recording' : 'Microphone'}
-              </span>
             </div>
 
             {/* System Audio Status */}
@@ -61,20 +70,27 @@ export function RecordingControlPanel({
                     icon="mdi:monitor-speaker"
                     className="w-8 h-8 text-purple-500 animate-pulse"
                   />
-                  <Icon
-                    icon="mdi:waveform"
-                    className={`w-6 h-6 ${hasSystemAudio ? 'text-green-500' : 'text-gray-400'}`}
-                  />
+                  <div title={hasSystemAudio ? 'Audio detected' : 'No audio'}>
+                    <Icon
+                      icon="mdi:waveform"
+                      className={`w-7 h-7 ${hasSystemAudio ? 'text-blue-600' : 'text-gray-300'}`}
+                    />
+                  </div>
                 </>
               ) : (
-                <Icon
-                  icon="mdi:monitor-off"
-                  className="w-8 h-8 text-gray-400"
-                />
+                <>
+                  <Icon
+                    icon="mdi:monitor-off"
+                    className="w-8 h-8 text-gray-400"
+                  />
+                  <div title="No audio">
+                    <Icon
+                      icon="mdi:waveform"
+                      className="w-7 h-7 text-gray-300"
+                    />
+                  </div>
+                </>
               )}
-              <span className="text-sm text-gray-600 font-medium">
-                {isSystemCapturing ? 'Screen Audio' : 'System Audio'}
-              </span>
             </div>
           </div>
 
@@ -84,25 +100,25 @@ export function RecordingControlPanel({
             {isRecording ? (
               <button
                 onClick={onStopRecording}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg transition-colors shadow-lg hover:shadow-xl flex items-center gap-2"
+                className="bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg transition-colors shadow-lg hover:shadow-xl"
+                title="Stop Mic"
+                aria-label="Stop Mic"
               >
-                <Icon icon="mdi:stop" className="w-5 h-5" />
-                <span className="text-sm font-medium">Stop Mic</span>
+                <Icon icon="mdi:stop" className="w-6 h-6" />
               </button>
             ) : (
               <button
                 onClick={onStartRecording}
                 disabled={isInitializing}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-3 rounded-lg transition-colors shadow-lg hover:shadow-xl flex items-center gap-2"
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white p-3 rounded-lg transition-colors shadow-lg hover:shadow-xl"
+                title={isInitializing ? 'Starting...' : 'Start Mic'}
+                aria-label={isInitializing ? 'Starting...' : 'Start Mic'}
               >
                 {isInitializing ? (
-                  <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" />
+                  <Icon icon="mdi:loading" className="w-6 h-6 animate-spin" />
                 ) : (
-                  <Icon icon="mdi:microphone" className="w-5 h-5" />
+                  <Icon icon="mdi:microphone" className="w-6 h-6" />
                 )}
-                <span className="text-sm font-medium">
-                  {isInitializing ? 'Starting...' : 'Start Mic'}
-                </span>
               </button>
             )}
 
@@ -110,21 +126,34 @@ export function RecordingControlPanel({
             {isSystemCapturing ? (
               <button
                 onClick={onStopSystemCapture}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg transition-colors shadow-lg hover:shadow-xl flex items-center gap-2"
+                className="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-lg transition-colors shadow-lg hover:shadow-xl"
+                title="Stop Screen"
+                aria-label="Stop Screen"
               >
-                <Icon icon="mdi:stop" className="w-5 h-5" />
-                <span className="text-sm font-medium">Stop Screen</span>
+                <Icon icon="mdi:stop" className="w-6 h-6" />
               </button>
             ) : (
               <button
                 onClick={onStartSystemCapture}
                 disabled={isInitializing || !onStartSystemCapture}
-                className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white px-4 py-3 rounded-lg transition-colors shadow-lg hover:shadow-xl flex items-center gap-2"
+                className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white p-3 rounded-lg transition-colors shadow-lg hover:shadow-xl"
+                title="Share Screen"
+                aria-label="Share Screen"
               >
-                <Icon icon="mdi:monitor-speaker" className="w-5 h-5" />
-                <span className="text-sm font-medium">Share Screen</span>
+                <Icon icon="mdi:monitor-speaker" className="w-6 h-6" />
               </button>
             )}
+
+            {/* End Session */}
+            <button
+              onClick={onEndSession}
+              disabled={!onEndSession}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white p-3 rounded-lg transition-colors shadow-lg hover:shadow-xl"
+              title="End Session"
+              aria-label="End Session"
+            >
+              <Icon icon="mdi:close" className="w-6 h-6" />
+            </button>
           </div>
         </div>
       </div>

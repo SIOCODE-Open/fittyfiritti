@@ -294,6 +294,31 @@ export function MainApplication() {
     }
   }
 
+  // Handle ending the entire session
+  const handleEndSession = () => {
+    try {
+      // Stop both recording and system capture
+      if (isRecording) {
+        vad.pause()
+        setIsRecording(false)
+      }
+      if (isSystemCapturing) {
+        systemAudio.stop()
+        setIsSystemCapturing(false)
+      }
+
+      // Reset to welcome screen
+      setHasStartedRecording(false)
+      setTranscriptionCards([])
+      setSystemTranscriptionCards([])
+
+      console.log('🛑 Session ended')
+    } catch (error) {
+      console.error('Failed to end session:', error)
+      setError('Failed to end session.')
+    }
+  }
+
   // Wrapper for recording control panel (no language params needed)
   const handleStartRecordingWrapper = async () => {
     return handleStartRecording(speakerLanguage, otherPartyLanguage, true)
@@ -371,6 +396,7 @@ export function MainApplication() {
               onStopRecording={handleStopRecording}
               onStartSystemCapture={handleStartSystemCapture}
               onStopSystemCapture={handleStopSystemCapture}
+              onEndSession={handleEndSession}
               isInitializing={isInitializing}
               userSpeaking={vad.userSpeaking}
               hasSystemAudio={systemAudio.systemSpeaking}
