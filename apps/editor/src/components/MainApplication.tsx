@@ -8,11 +8,11 @@ import { useTranscriptionEvents } from '../contexts/TranscriptionEventsContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useVAD } from '../contexts/VADContext'
 import {
-  AppState,
   AudioChunk,
   SystemTranscriptionCard,
   TranscriptionCard,
 } from '../types'
+import { convertAudioToBlob } from '../utils/audioUtils'
 import { ErrorDisplay } from './ErrorDisplay'
 import { RecordingControlPanel } from './RecordingControlPanel'
 import { SubjectDisplay } from './SubjectDisplay'
@@ -30,14 +30,14 @@ export function MainApplication() {
   const vad = useVAD()
   const systemAudio = useSystemAudio()
 
-  const [appState, setAppState] = useState<AppState>({
-    isRecording: false,
-    currentTranscription: '',
-    transcriptionCards: [],
-    systemTranscriptionCards: [],
-    liveWaveformData: [],
-    isSystemCapturing: false,
-  })
+  const [isRecording, setIsRecording] = useState(false)
+  const [transcriptionCards, setTranscriptionCards] = useState<
+    TranscriptionCard[]
+  >([])
+  const [systemTranscriptionCards, setSystemTranscriptionCards] = useState<
+    SystemTranscriptionCard[]
+  >([])
+  const [isSystemCapturing, setIsSystemCapturing] = useState(false)
 
   const [isInitializing, setIsInitializing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,49 +54,6 @@ export function MainApplication() {
     []
   )
 
-  // Convert Float32Array to Blob for transcription
-  const convertAudioToBlob = useCallback((audioData: Float32Array): Blob => {
-    // Convert Float32Array to WAV format
-    const length = audioData.length
-    const buffer = new ArrayBuffer(44 + length * 2)
-    const view = new DataView(buffer)
-
-    // WAV header
-    const writeString = (offset: number, string: string) => {
-      for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i))
-      }
-    }
-
-    const sampleRate = 16000 // VAD uses 16kHz
-    const numChannels = 1
-    const bitsPerSample = 16
-
-    writeString(0, 'RIFF')
-    view.setUint32(4, 36 + length * 2, true)
-    writeString(8, 'WAVE')
-    writeString(12, 'fmt ')
-    view.setUint32(16, 16, true)
-    view.setUint16(20, 1, true)
-    view.setUint16(22, numChannels, true)
-    view.setUint32(24, sampleRate, true)
-    view.setUint32(28, (sampleRate * numChannels * bitsPerSample) / 8, true)
-    view.setUint16(32, (numChannels * bitsPerSample) / 8, true)
-    view.setUint16(34, bitsPerSample, true)
-    writeString(36, 'data')
-    view.setUint32(40, length * 2, true)
-
-    // Convert float32 samples to int16
-    let offset = 44
-    for (let i = 0; i < length; i++) {
-      const sample = Math.max(-1, Math.min(1, audioData[i] || 0))
-      view.setInt16(offset, sample * 0x7fff, true)
-      offset += 2
-    }
-
-    return new Blob([buffer], { type: 'audio/wav' })
-  }, [])
-
   // Async translation helper with streaming and job deduplication
   const translateTextAsync = useCallback(
     (cardId: string, text: string) => {
@@ -105,14 +62,13 @@ export function MainApplication() {
         return
       }
 
-      setAppState(prev => ({
-        ...prev,
-        transcriptionCards: prev.transcriptionCards.map(card =>
+      setTranscriptionCards(prev =>
+        prev.map(card =>
           card.id === cardId
             ? { ...card, isTranslating: true, textJa: '' }
             : card
-        ),
-      }))
+        )
+      )
 
       // Check if streaming is available, otherwise fall back to regular translation
       if (translationService.translateToTargetLanguageStreaming) {
@@ -130,64 +86,58 @@ export function MainApplication() {
                 accumulatedText += value
 
                 // Update UI with streaming text
-                setAppState(prev => ({
-                  ...prev,
-                  transcriptionCards: prev.transcriptionCards.map(card =>
+                setTranscriptionCards(prev =>
+                  prev.map(card =>
                     card.id === cardId
                       ? { ...card, textJa: accumulatedText }
                       : card
-                  ),
-                }))
+                  )
+                )
               }
 
               // Mark translation as complete
-              setAppState(prev => ({
-                ...prev,
-                transcriptionCards: prev.transcriptionCards.map(card =>
+              setTranscriptionCards(prev =>
+                prev.map(card =>
                   card.id === cardId ? { ...card, isTranslating: false } : card
-                ),
-              }))
+                )
+              )
             } catch (error) {
               console.error('Streaming translation failed:', error)
-              setAppState(prev => ({
-                ...prev,
-                transcriptionCards: prev.transcriptionCards.map(card =>
+              setTranscriptionCards(prev =>
+                prev.map(card =>
                   card.id === cardId ? { ...card, isTranslating: false } : card
-                ),
-              }))
+                )
+              )
             }
           })
           .catch(error => {
             console.error('Failed to start streaming translation:', error)
-            setAppState(prev => ({
-              ...prev,
-              transcriptionCards: prev.transcriptionCards.map(card =>
+            setTranscriptionCards(prev =>
+              prev.map(card =>
                 card.id === cardId ? { ...card, isTranslating: false } : card
-              ),
-            }))
+              )
+            )
           })
       } else {
         // Fallback to regular translation
         translationService
           .translateToTargetLanguage(text)
           .then(translation => {
-            setAppState(prev => ({
-              ...prev,
-              transcriptionCards: prev.transcriptionCards.map(card =>
+            setTranscriptionCards(prev =>
+              prev.map(card =>
                 card.id === cardId
                   ? { ...card, textJa: translation, isTranslating: false }
                   : card
-              ),
-            }))
+              )
+            )
           })
           .catch(error => {
             console.error('Translation failed:', error)
-            setAppState(prev => ({
-              ...prev,
-              transcriptionCards: prev.transcriptionCards.map(card =>
+            setTranscriptionCards(prev =>
+              prev.map(card =>
                 card.id === cardId ? { ...card, isTranslating: false } : card
-              ),
-            }))
+              )
+            )
           })
       }
     },
@@ -202,14 +152,13 @@ export function MainApplication() {
         return
       }
 
-      setAppState(prev => ({
-        ...prev,
-        systemTranscriptionCards: prev.systemTranscriptionCards.map(card =>
+      setSystemTranscriptionCards(prev =>
+        prev.map(card =>
           card.id === cardId
             ? { ...card, isTranslating: true, textEn: '' }
             : card
-        ),
-      }))
+        )
+      )
 
       // Check if streaming is available, otherwise fall back to regular translation
       if (systemTranslationService.translateToEnglishStreaming) {
@@ -227,38 +176,28 @@ export function MainApplication() {
                 accumulatedText += value
 
                 // Update UI with streaming text
-                setAppState(prev => ({
-                  ...prev,
-                  systemTranscriptionCards: prev.systemTranscriptionCards.map(
-                    card =>
-                      card.id === cardId
-                        ? { ...card, textEn: accumulatedText }
-                        : card
-                  ),
-                }))
+                setSystemTranscriptionCards(prev =>
+                  prev.map(card =>
+                    card.id === cardId
+                      ? { ...card, textEn: accumulatedText }
+                      : card
+                  )
+                )
               }
 
               // Mark translation as complete
-              setAppState(prev => ({
-                ...prev,
-                systemTranscriptionCards: prev.systemTranscriptionCards.map(
-                  card =>
-                    card.id === cardId
-                      ? { ...card, isTranslating: false }
-                      : card
-                ),
-              }))
+              setSystemTranscriptionCards(prev =>
+                prev.map(card =>
+                  card.id === cardId ? { ...card, isTranslating: false } : card
+                )
+              )
             } catch (error) {
               console.error('Streaming system translation failed:', error)
-              setAppState(prev => ({
-                ...prev,
-                systemTranscriptionCards: prev.systemTranscriptionCards.map(
-                  card =>
-                    card.id === cardId
-                      ? { ...card, isTranslating: false }
-                      : card
-                ),
-              }))
+              setSystemTranscriptionCards(prev =>
+                prev.map(card =>
+                  card.id === cardId ? { ...card, isTranslating: false } : card
+                )
+              )
             }
           })
           .catch(error => {
@@ -266,38 +205,32 @@ export function MainApplication() {
               'Failed to start streaming system translation:',
               error
             )
-            setAppState(prev => ({
-              ...prev,
-              systemTranscriptionCards: prev.systemTranscriptionCards.map(
-                card =>
-                  card.id === cardId ? { ...card, isTranslating: false } : card
-              ),
-            }))
+            setSystemTranscriptionCards(prev =>
+              prev.map(card =>
+                card.id === cardId ? { ...card, isTranslating: false } : card
+              )
+            )
           })
       } else {
         // Fallback to regular translation
         systemTranslationService
           .translateToEnglish(text)
           .then(translation => {
-            setAppState(prev => ({
-              ...prev,
-              systemTranscriptionCards: prev.systemTranscriptionCards.map(
-                card =>
-                  card.id === cardId
-                    ? { ...card, textEn: translation, isTranslating: false }
-                    : card
-              ),
-            }))
+            setSystemTranscriptionCards(prev =>
+              prev.map(card =>
+                card.id === cardId
+                  ? { ...card, textEn: translation, isTranslating: false }
+                  : card
+              )
+            )
           })
           .catch(error => {
             console.error('System translation failed:', error)
-            setAppState(prev => ({
-              ...prev,
-              systemTranscriptionCards: prev.systemTranscriptionCards.map(
-                card =>
-                  card.id === cardId ? { ...card, isTranslating: false } : card
-              ),
-            }))
+            setSystemTranscriptionCards(prev =>
+              prev.map(card =>
+                card.id === cardId ? { ...card, isTranslating: false } : card
+              )
+            )
           })
       }
     },
@@ -323,19 +256,15 @@ export function MainApplication() {
 
         if (!transcription.trim()) {
           // If transcription is empty, remove the loading card
-          setAppState(prev => ({
-            ...prev,
-            transcriptionCards: prev.transcriptionCards.filter(
-              card => card.id !== loadingCardId
-            ),
-          }))
+          setTranscriptionCards(prev =>
+            prev.filter(card => card.id !== loadingCardId)
+          )
           return
         }
 
         // Update the loading card with transcription
-        setAppState(prev => ({
-          ...prev,
-          transcriptionCards: prev.transcriptionCards.map(card =>
+        setTranscriptionCards(prev =>
+          prev.map(card =>
             card.id === loadingCardId
               ? {
                   ...card,
@@ -345,13 +274,8 @@ export function MainApplication() {
                   waveformData: chunk.waveformData || card.waveformData,
                 }
               : card
-          ),
-        }))
-
-        // Start async translation only if languages differ
-        if (speakerLanguage !== otherPartyLanguage) {
-          translateTextAsync(loadingCardId, transcription)
-        }
+          )
+        )
 
         // Publish completed transcription for subject analysis
         publishTranscription({
@@ -359,6 +283,11 @@ export function MainApplication() {
           text: transcription,
           timestamp: Date.now(),
         })
+
+        // Start async translation only if languages differ
+        if (speakerLanguage !== otherPartyLanguage) {
+          translateTextAsync(loadingCardId, transcription)
+        }
       } catch (error) {
         console.error('Failed to process audio chunk:', error)
         setError('Failed to process audio. Please try again.')
@@ -395,19 +324,15 @@ export function MainApplication() {
 
         if (!transcription.trim()) {
           // If transcription is empty, remove the loading card
-          setAppState(prev => ({
-            ...prev,
-            systemTranscriptionCards: prev.systemTranscriptionCards.filter(
-              card => card.id !== loadingCardId
-            ),
-          }))
+          setSystemTranscriptionCards(prev =>
+            prev.filter(card => card.id !== loadingCardId)
+          )
           return
         }
 
         // Update the loading card with Japanese transcription
-        setAppState(prev => ({
-          ...prev,
-          systemTranscriptionCards: prev.systemTranscriptionCards.map(card =>
+        setSystemTranscriptionCards(prev =>
+          prev.map(card =>
             card.id === loadingCardId
               ? {
                   ...card,
@@ -417,8 +342,8 @@ export function MainApplication() {
                   waveformData: chunk.waveformData || card.waveformData,
                 }
               : card
-          ),
-        }))
+          )
+        )
 
         // Start async translation to English only if languages differ
         if (speakerLanguage !== otherPartyLanguage) {
@@ -466,10 +391,7 @@ export function MainApplication() {
         // Store the card ID for the audio processing
         currentLoadingCardId.current = cardId
 
-        setAppState(prev => ({
-          ...prev,
-          transcriptionCards: [...prev.transcriptionCards, newCard],
-        }))
+        setTranscriptionCards(prev => [...prev, newCard])
 
         // Convert VAD audio to blob
         const audioBlob = convertAudioToBlob(audioData)
@@ -490,7 +412,7 @@ export function MainApplication() {
         setError('Failed to process speech. Please try again.')
       }
     },
-    [generateId, convertAudioToBlob, handleAudioChunk]
+    [generateId, handleAudioChunk]
   )
 
   // Handle system audio segment completion
@@ -511,10 +433,7 @@ export function MainApplication() {
         // Store the card ID for the audio processing
         currentSystemLoadingCardId.current = cardId
 
-        setAppState(prev => ({
-          ...prev,
-          systemTranscriptionCards: [...prev.systemTranscriptionCards, newCard],
-        }))
+        setSystemTranscriptionCards(prev => [...prev, newCard])
 
         // Process the audio chunk
         await handleSystemAudioChunk(audioChunk)
@@ -561,7 +480,7 @@ export function MainApplication() {
       // Start VAD listening
       vad.start()
 
-      setAppState(prev => ({ ...prev, isRecording: true }))
+      setIsRecording(true)
       setHasStartedRecording(true) // Mark that recording has been started at least once
       setIsInitializing(false)
 
@@ -593,7 +512,7 @@ export function MainApplication() {
       // Start system audio capture
       await systemAudio.start()
 
-      setAppState(prev => ({ ...prev, isSystemCapturing: true }))
+      setIsSystemCapturing(true)
       setIsInitializing(false)
 
       console.log('🖥️ System audio capture started successfully')
@@ -612,11 +531,7 @@ export function MainApplication() {
       // Stop VAD listening
       vad.pause()
 
-      setAppState(prev => ({
-        ...prev,
-        isRecording: false,
-        currentTranscription: '',
-      }))
+      setIsRecording(false)
 
       console.log('🛑 VAD recording stopped')
     } catch (error) {
@@ -631,10 +546,7 @@ export function MainApplication() {
       // Stop system audio capture
       systemAudio.stop()
 
-      setAppState(prev => ({
-        ...prev,
-        isSystemCapturing: false,
-      }))
+      setIsSystemCapturing(false)
 
       console.log('🛑 System audio capture stopped')
     } catch (error) {
@@ -676,35 +588,27 @@ export function MainApplication() {
       {/* Main Content Container */}
       <div className="w-full px-6 py-8">
         {/* When not recording AND never started recording: Show huge record button in center */}
-        {!appState.isRecording &&
-          !hasStartedRecording &&
-          !appState.isSystemCapturing && (
-            <WelcomeScreen
-              onStartRecording={handleStartRecording}
-              isInitializing={isInitializing}
-            />
-          )}
+        {!isRecording && !hasStartedRecording && !isSystemCapturing && (
+          <WelcomeScreen
+            onStartRecording={handleStartRecording}
+            isInitializing={isInitializing}
+          />
+        )}
 
         {/* When recording OR has started recording OR system capturing: Show two-column layout */}
-        {(appState.isRecording ||
-          hasStartedRecording ||
-          appState.isSystemCapturing) && (
+        {(isRecording || hasStartedRecording || isSystemCapturing) && (
           <div className="flex gap-6 h-[calc(100vh-12rem)]">
-            {/* Left Side - Unified Transcription Stream (67%) */}
-            <div className="flex-[2]">
+            <div className="flex-1">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
                 <UnifiedTranscriptionStream
-                  transcriptionCards={appState.transcriptionCards}
-                  systemTranscriptionCards={appState.systemTranscriptionCards}
-                  isRecording={appState.isRecording}
-                  isCapturing={appState.isSystemCapturing}
+                  transcriptionCards={transcriptionCards}
+                  systemTranscriptionCards={systemTranscriptionCards}
                   speakerLanguage={speakerLanguage}
                   otherPartyLanguage={otherPartyLanguage}
                 />
               </div>
             </div>
 
-            {/* Right Side - Subject Analysis (33%) */}
             <div className="flex-1">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
                 <SubjectDisplay />
@@ -715,10 +619,10 @@ export function MainApplication() {
       </div>
 
       {/* Floating Panel at Bottom - Shows when recording has been started */}
-      {(hasStartedRecording || appState.isSystemCapturing) && (
+      {(hasStartedRecording || isSystemCapturing) && (
         <RecordingControlPanel
-          isRecording={appState.isRecording}
-          isSystemCapturing={appState.isSystemCapturing}
+          isRecording={isRecording}
+          isSystemCapturing={isSystemCapturing}
           onStartRecording={handleStartRecordingWrapper}
           onStopRecording={handleStopRecording}
           onStartSystemCapture={handleStartSystemCapture}

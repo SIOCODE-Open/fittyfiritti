@@ -23,10 +23,8 @@ export interface SystemTranscriptionCard {
 // Application State
 export interface AppState {
   isRecording: boolean
-  currentTranscription: string
   transcriptionCards: TranscriptionCard[]
   systemTranscriptionCards: SystemTranscriptionCard[]
-  liveWaveformData: number[] // Live waveform for current recording
   isSystemCapturing: boolean
 }
 

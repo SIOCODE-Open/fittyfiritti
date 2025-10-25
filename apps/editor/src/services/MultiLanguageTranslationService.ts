@@ -18,12 +18,8 @@ export const SUPPORTED_LANGUAGE_PAIRS: LanguagePair[] = [
   { source: 'ja', target: 'en', name: 'Japanese to English' },
   { source: 'en', target: 'es', name: 'English to Spanish' },
   { source: 'es', target: 'en', name: 'Spanish to English' },
-  { source: 'en', target: 'fr', name: 'English to French' },
-  { source: 'fr', target: 'en', name: 'French to English' },
   { source: 'ja', target: 'es', name: 'Japanese to Spanish' },
   { source: 'es', target: 'ja', name: 'Spanish to Japanese' },
-  { source: 'ja', target: 'fr', name: 'Japanese to French' },
-  { source: 'fr', target: 'ja', name: 'French to Japanese' },
 ]
 
 export interface TranslationRequest {

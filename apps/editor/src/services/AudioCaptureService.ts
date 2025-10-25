@@ -5,13 +5,7 @@ export class AudioCaptureServiceImpl implements AudioCaptureService {
   private audioStream?: MediaStream
   private chunks: Blob[] = []
   private onChunkCallback?: (chunk: AudioChunk) => void
-  private onWaveformCallback?: (waveformData: number[]) => void
   private segmentStartTime = 0
-  private audioContext?: AudioContext
-  private analyser?: AnalyserNode
-  private microphone?: MediaStreamAudioSourceNode
-  private waveformData: number[] = []
-  private waveformInterval?: number
 
   public isCapturing = false
 
@@ -22,25 +16,13 @@ export class AudioCaptureServiceImpl implements AudioCaptureService {
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          sampleRate: 16000, // Good for speech recognition
+          sampleRate: 16000,
         },
       })
 
-      // Set up audio analysis for waveform
-      this.audioContext = new AudioContext()
-      this.analyser = this.audioContext.createAnalyser()
-      this.analyser.fftSize = 256
-      this.microphone = this.audioContext.createMediaStreamSource(
-        this.audioStream
-      )
-      this.microphone.connect(this.analyser)
-
-      // Start waveform analysis
-      this.startWaveformAnalysis()
-
       // Create MediaRecorder
       this.mediaRecorder = new MediaRecorder(this.audioStream, {
-        mimeType: 'audio/webm;codecs=opus', // Good compression for speech
+        mimeType: 'audio/webm;codecs=opus',
       })
 
       this.chunks = []
@@ -68,9 +50,6 @@ export class AudioCaptureServiceImpl implements AudioCaptureService {
   stopCapture(): void {
     this.isCapturing = false
 
-    // Stop waveform analysis
-    this.stopWaveformAnalysis()
-
     // Stop media recorder
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop()
@@ -82,54 +61,7 @@ export class AudioCaptureServiceImpl implements AudioCaptureService {
       this.audioStream = undefined
     }
 
-    // Clean up audio context
-    if (this.audioContext) {
-      this.audioContext.close()
-      this.audioContext = undefined
-    }
-
     console.log('🛑 Audio capture stopped')
-  }
-
-  private startWaveformAnalysis(): void {
-    if (!this.analyser) return
-
-    const bufferLength = this.analyser.frequencyBinCount
-    const dataArray = new Uint8Array(bufferLength)
-
-    const updateWaveform = () => {
-      if (!this.analyser || !this.isCapturing) return
-
-      this.analyser.getByteFrequencyData(dataArray)
-
-      // Convert to normalized amplitudes (0-1)
-      const normalizedData = Array.from(dataArray).map(value => value / 255)
-
-      // Add to waveform data (keep last 5 seconds worth)
-      this.waveformData.push(...normalizedData.slice(0, 8)) // Take first 8 frequency bins
-
-      // Keep only last 5 seconds of data (assuming ~60fps updates)
-      const maxDataPoints = 300 * 8 // 5 seconds * 60fps * 8 data points
-      if (this.waveformData.length > maxDataPoints) {
-        this.waveformData = this.waveformData.slice(-maxDataPoints)
-      }
-
-      // Call the callback with current waveform data
-      if (this.onWaveformCallback) {
-        this.onWaveformCallback([...this.waveformData])
-      }
-    }
-
-    // Update waveform at ~60fps
-    this.waveformInterval = window.setInterval(updateWaveform, 16)
-  }
-
-  private stopWaveformAnalysis(): void {
-    if (this.waveformInterval) {
-      clearInterval(this.waveformInterval)
-      this.waveformInterval = undefined
-    }
-    this.waveformData = []
   }
 
   completeSegment(): void {
@@ -159,7 +91,7 @@ export class AudioCaptureServiceImpl implements AudioCaptureService {
             timestamp,
             windowStart,
             windowEnd,
-            waveformData: [...this.waveformData], // Include current waveform
+            waveformData: [],
           }
 
           console.log('Created audio chunk, calling callback')
@@ -192,7 +124,7 @@ export class AudioCaptureServiceImpl implements AudioCaptureService {
     this.onChunkCallback = callback
   }
 
-  onWaveformData(callback: (waveformData: number[]) => void): void {
-    this.onWaveformCallback = callback
+  onWaveformData(_callback: (waveformData: number[]) => void): void {
+    // No-op: waveform analysis removed
   }
 }
