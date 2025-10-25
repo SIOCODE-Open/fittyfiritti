@@ -41,7 +41,7 @@ export interface AudioCaptureService {
 
 export interface TranscriptionService {
   transcribeStreaming(audioBlob: Blob): Promise<ReadableStream<string>>
-  initialize(): Promise<void>
+  initialize(language: 'english' | 'spanish' | 'japanese'): Promise<void>
   destroy(): void
 }
 

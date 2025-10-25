@@ -203,7 +203,7 @@ export function MainApplication() {
 
       // Initialize services
       await Promise.all([
-        transcriptionService.initialize(),
+        transcriptionService.initialize(selectedSpeakerLanguage),
         translationService.initialize(selectedOtherPartyLanguage),
       ])
 

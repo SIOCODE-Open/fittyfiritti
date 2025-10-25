@@ -1,12 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, ReactNode, useContext, useMemo } from 'react'
-import {
-  SystemTranscriptionService,
-  SystemTranscriptionServiceImpl,
-} from '../services/SystemTranscriptionService'
+import { TranscriptionServiceImpl } from '../services/TranscriptionService'
+import { TranscriptionService } from '../types'
 
 interface SystemTranscriptionContextType {
-  systemTranscriptionService: SystemTranscriptionService
+  systemTranscriptionService: TranscriptionService
 }
 
 const SystemTranscriptionContext =
@@ -20,7 +18,7 @@ export function SystemTranscriptionProvider({
   children,
 }: SystemTranscriptionProviderProps) {
   const systemTranscriptionService = useMemo(
-    () => new SystemTranscriptionServiceImpl(),
+    () => new TranscriptionServiceImpl(),
     []
   )
 
@@ -38,7 +36,7 @@ export function SystemTranscriptionProvider({
   )
 }
 
-export function useSystemTranscription(): SystemTranscriptionService {
+export function useSystemTranscription(): TranscriptionService {
   const context = useContext(SystemTranscriptionContext)
   if (!context) {
     throw new Error(
