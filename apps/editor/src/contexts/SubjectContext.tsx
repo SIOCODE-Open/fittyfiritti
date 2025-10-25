@@ -1,13 +1,37 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useCallback, useContext, useState } from 'react'
 
 export interface Subject {
   id: string
   title: string
 }
 
+export interface BulletPointItem {
+  id: string
+  text: string
+  timestamp: number
+  translation?: string
+}
+
+export interface SubjectHistory {
+  subject: Subject
+  bulletPoints: BulletPointItem[]
+  subjectTranslation?: string
+}
+
 export interface SubjectContextValue {
   currentSubject: Subject | null
   changeSubject: (subject: Subject) => void
+  subjectHistory: SubjectHistory[]
+  currentHistoryIndex: number
+  addBulletPointToHistory: (bulletPoint: BulletPointItem) => void
+  navigateToHistory: (index: number) => void
+  canNavigatePrevious: boolean
+  canNavigateNext: boolean
+  updateSubjectTranslation: (translation: string) => void
+  updateBulletPointTranslation: (
+    bulletPointId: string,
+    translation: string
+  ) => void
 }
 
 const SubjectContext = createContext<SubjectContextValue | null>(null)
@@ -27,14 +51,97 @@ interface SubjectProviderProps {
 
 export function SubjectProvider({ children }: SubjectProviderProps) {
   const [currentSubject, setCurrentSubject] = useState<Subject | null>(null)
+  const [subjectHistory, setSubjectHistory] = useState<SubjectHistory[]>([])
+  const [currentHistoryIndex, setCurrentHistoryIndex] = useState<number>(-1)
 
   const changeSubject = (subject: Subject) => {
     setCurrentSubject(subject)
+
+    // Add new subject to history
+    setSubjectHistory(prev => [...prev, { subject, bulletPoints: [] }])
+    setCurrentHistoryIndex(prev => prev + 1)
   }
+
+  const addBulletPointToHistory = (bulletPoint: BulletPointItem) => {
+    if (currentHistoryIndex >= 0) {
+      setSubjectHistory(prev => {
+        const updated = [...prev]
+        const current = updated[currentHistoryIndex]
+        if (current) {
+          updated[currentHistoryIndex] = {
+            ...current,
+            bulletPoints: [...current.bulletPoints, bulletPoint],
+          }
+        }
+        return updated
+      })
+    }
+  }
+
+  const navigateToHistory = (index: number) => {
+    if (index >= 0 && index < subjectHistory.length) {
+      const historyItem = subjectHistory[index]
+      if (historyItem) {
+        setCurrentHistoryIndex(index)
+        setCurrentSubject(historyItem.subject)
+      }
+    }
+  }
+
+  const canNavigatePrevious = currentHistoryIndex > 0
+  const canNavigateNext = currentHistoryIndex < subjectHistory.length - 1
+
+  const updateSubjectTranslation = useCallback(
+    (translation: string) => {
+      if (currentHistoryIndex >= 0) {
+        setSubjectHistory(prev => {
+          const updated = [...prev]
+          const current = updated[currentHistoryIndex]
+          if (current) {
+            updated[currentHistoryIndex] = {
+              ...current,
+              subjectTranslation: translation,
+            }
+          }
+          return updated
+        })
+      }
+    },
+    [currentHistoryIndex]
+  )
+
+  const updateBulletPointTranslation = useCallback(
+    (bulletPointId: string, translation: string) => {
+      if (currentHistoryIndex >= 0) {
+        setSubjectHistory(prev => {
+          const updated = [...prev]
+          const current = updated[currentHistoryIndex]
+          if (current) {
+            updated[currentHistoryIndex] = {
+              ...current,
+              bulletPoints: current.bulletPoints.map(bp =>
+                bp.id === bulletPointId ? { ...bp, translation } : bp
+              ),
+            }
+          }
+          return updated
+        })
+      }
+    },
+    [currentHistoryIndex]
+  )
 
   const value: SubjectContextValue = {
     currentSubject,
     changeSubject,
+    subjectHistory,
+    currentHistoryIndex,
+    addBulletPointToHistory,
+    navigateToHistory,
+    canNavigatePrevious,
+    canNavigateNext,
+    updateSubjectTranslation,
+    updateBulletPointTranslation,
   }
 
   return (

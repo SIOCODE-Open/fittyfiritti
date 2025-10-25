@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Subject } from '../contexts/SubjectContext'
+import { useSubject } from '../contexts/SubjectContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { shouldTranslate } from '../utils/languageUtils'
 import { BulletPoint } from './BulletPoint'
@@ -9,6 +10,7 @@ export interface BulletPointItem {
   id: string
   text: string
   timestamp: number
+  translation?: string
 }
 
 interface SubjectCardProps {
@@ -25,13 +27,30 @@ export const SubjectCard = ({
   otherPartyLanguage,
 }: SubjectCardProps) => {
   const translationService = useTranslation()
+  const { updateSubjectTranslation, subjectHistory, currentHistoryIndex } =
+    useSubject()
   const [titleJa, setTitleJa] = useState<string>('')
   const [isTranslating, setIsTranslating] = useState(false)
   const needsTranslation = shouldTranslate(speakerLanguage, otherPartyLanguage)
+  const translationSavedRef = useRef(false)
+
+  useEffect(() => {
+    // Reset the saved flag when subject changes
+    translationSavedRef.current = false
+  }, [subject.id])
 
   useEffect(() => {
     const translateTitle = async () => {
       if (!subject.title || !translationService || !needsTranslation) return
+
+      // Check if we already have a translation in the history
+      const currentHistory = subjectHistory[currentHistoryIndex]
+      if (currentHistory?.subjectTranslation) {
+        // Use existing translation - no need to re-translate
+        setTitleJa(currentHistory.subjectTranslation)
+        setIsTranslating(false)
+        return
+      }
 
       setIsTranslating(true)
       setTitleJa('')
@@ -54,6 +73,11 @@ export const SubjectCard = ({
           }
 
           setIsTranslating(false)
+          // Update the translation in context for export - only once
+          if (accumulatedText && !translationSavedRef.current) {
+            translationSavedRef.current = true
+            updateSubjectTranslation(accumulatedText)
+          }
         } catch (streamError) {
           console.error('Streaming subject translation failed:', streamError)
           setIsTranslating(false)
@@ -71,7 +95,14 @@ export const SubjectCard = ({
     return () => {
       clearTimeout(debounceTimer)
     }
-  }, [subject.title, translationService, needsTranslation])
+  }, [
+    subject.title,
+    translationService,
+    needsTranslation,
+    updateSubjectTranslation,
+    subjectHistory,
+    currentHistoryIndex,
+  ])
 
   return (
     <div className="mb-6">

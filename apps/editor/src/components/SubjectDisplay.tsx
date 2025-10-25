@@ -21,7 +21,16 @@ export function SubjectDisplay({
   speakerLanguage,
   otherPartyLanguage,
 }: SubjectDisplayProps) {
-  const { currentSubject, changeSubject } = useSubject()
+  const {
+    currentSubject,
+    changeSubject,
+    subjectHistory,
+    currentHistoryIndex,
+    addBulletPointToHistory,
+    navigateToHistory,
+    canNavigatePrevious,
+    canNavigateNext,
+  } = useSubject()
   const { onTranscriptionComplete } = useTranscriptionEvents()
   const [subjectDetectionService] = useState(
     () => new SubjectDetectionService()
@@ -35,10 +44,17 @@ export function SubjectDisplay({
     return () => subjectDetectionService.destroy()
   }, [subjectDetectionService])
 
-  // Clear bullet points when subject changes
+  // Sync bullet points with current history entry
   useEffect(() => {
-    setBulletPoints([])
-  }, [currentSubject?.id])
+    if (currentHistoryIndex >= 0 && subjectHistory[currentHistoryIndex]) {
+      const historyItem = subjectHistory[currentHistoryIndex]
+      if (historyItem) {
+        setBulletPoints(historyItem.bulletPoints)
+      }
+    } else {
+      setBulletPoints([])
+    }
+  }, [currentHistoryIndex, subjectHistory])
 
   // Handle transcription completion events with simple state updates
   const handleTranscriptionComplete = useCallback(
@@ -92,6 +108,7 @@ export function SubjectDisplay({
             timestamp: Date.now(),
           }
           setBulletPoints(prev => [...prev, bulletPoint])
+          addBulletPointToHistory(bulletPoint)
         }
       } catch (error) {
         console.error('Failed to analyze transcription:', error)
@@ -101,7 +118,12 @@ export function SubjectDisplay({
         setIsAnalyzing(false)
       }
     },
-    [subjectDetectionService, currentSubject, changeSubject]
+    [
+      subjectDetectionService,
+      currentSubject,
+      changeSubject,
+      addBulletPointToHistory,
+    ]
   )
 
   // Subscribe to transcription events
@@ -110,8 +132,115 @@ export function SubjectDisplay({
     return unsubscribe
   }, [onTranscriptionComplete, handleTranscriptionComplete])
 
+  // Export all subjects as markdown
+  const handleExportMarkdown = () => {
+    if (subjectHistory.length === 0) {
+      alert('No subjects to export yet!')
+      return
+    }
+
+    const shouldShowTranslations = speakerLanguage !== otherPartyLanguage
+
+    const content = subjectHistory
+      .map(historyItem => {
+        const lines: string[] = []
+
+        // Subject title (level 1 heading)
+        lines.push(`# ${historyItem.subject.title}`)
+        lines.push('')
+
+        // Subject translation (level 2 heading) if available
+        if (shouldShowTranslations && historyItem.subjectTranslation) {
+          lines.push(`## ${historyItem.subjectTranslation}`)
+          lines.push('')
+        }
+
+        // Bullet points
+        if (historyItem.bulletPoints.length > 0) {
+          historyItem.bulletPoints.forEach(bp => {
+            lines.push(`- ${bp.text}`)
+            if (shouldShowTranslations && bp.translation) {
+              lines.push(`  - ${bp.translation}`)
+            }
+          })
+        } else {
+          lines.push('_No bullet points yet_')
+        }
+
+        return lines.join('\n')
+      })
+      .join('\n\n---\n\n')
+
+    // Create and download file
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `subjects-${new Date().toISOString().split('T')[0]}.md`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  // Navigation handlers
+  const handlePrevious = () => {
+    if (canNavigatePrevious) {
+      navigateToHistory(currentHistoryIndex - 1)
+    }
+  }
+
+  const handleNext = () => {
+    if (canNavigateNext) {
+      navigateToHistory(currentHistoryIndex + 1)
+    }
+  }
+
   return (
     <div className="h-full flex flex-col">
+      {/* Header with Navigation and Export */}
+      {currentSubject && (
+        <div className="flex justify-between items-center p-2 border-b border-gray-200">
+          {/* Navigation */}
+          <div className="flex gap-1">
+            <button
+              onClick={handlePrevious}
+              disabled={!canNavigatePrevious}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Previous subject"
+              aria-label="Previous subject"
+            >
+              <Icon icon="mdi:chevron-left" className="w-5 h-5 text-gray-600" />
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={!canNavigateNext}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Next subject"
+              aria-label="Next subject"
+            >
+              <Icon
+                icon="mdi:chevron-right"
+                className="w-5 h-5 text-gray-600"
+              />
+            </button>
+            <div className="flex items-center px-2 text-sm text-gray-600">
+              {currentHistoryIndex + 1} / {subjectHistory.length}
+            </div>
+          </div>
+
+          {/* Export Button */}
+          <button
+            onClick={handleExportMarkdown}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Export all subjects as markdown"
+            aria-label="Export all subjects as markdown"
+          >
+            <Icon icon="mdi:download" className="w-5 h-5 text-gray-600" />
+          </button>
+        </div>
+      )}
+
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
         {/* Current Subject */}

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useSubject } from '../contexts/SubjectContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { shouldTranslate } from '../utils/languageUtils'
 import type { BulletPointItem } from './SubjectCard'
@@ -16,13 +17,28 @@ export function BulletPoint({
   otherPartyLanguage,
 }: BulletPointProps) {
   const translationService = useTranslation()
+  const { updateBulletPointTranslation } = useSubject()
   const [textJa, setTextJa] = useState<string>('')
   const [isTranslating, setIsTranslating] = useState(false)
   const needsTranslation = shouldTranslate(speakerLanguage, otherPartyLanguage)
+  const translationSavedRef = useRef(false)
+
+  useEffect(() => {
+    // Reset the saved flag when bullet point changes
+    translationSavedRef.current = false
+  }, [bulletPoint.id])
 
   useEffect(() => {
     const translateText = async () => {
       if (!bulletPoint.text || !translationService || !needsTranslation) return
+
+      // Check if we already have a translation for this bullet point
+      if (bulletPoint.translation) {
+        // Use existing translation - no need to re-translate
+        setTextJa(bulletPoint.translation)
+        setIsTranslating(false)
+        return
+      }
 
       setIsTranslating(true)
       setTextJa('')
@@ -45,6 +61,11 @@ export function BulletPoint({
           }
 
           setIsTranslating(false)
+          // Update the translation in context for export - only once
+          if (accumulatedText && !translationSavedRef.current) {
+            translationSavedRef.current = true
+            updateBulletPointTranslation(bulletPoint.id, accumulatedText)
+          }
         } catch (streamError) {
           console.error(
             'Streaming bullet point translation failed:',
@@ -65,7 +86,14 @@ export function BulletPoint({
     return () => {
       clearTimeout(debounceTimer)
     }
-  }, [bulletPoint.text, translationService, needsTranslation])
+  }, [
+    bulletPoint.text,
+    bulletPoint.id,
+    bulletPoint.translation,
+    translationService,
+    needsTranslation,
+    updateBulletPointTranslation,
+  ])
 
   return (
     <div className="mb-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
