@@ -24,8 +24,8 @@ export function RecordingControlPanel({
   hasSystemAudio = false,
 }: RecordingControlPanelProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-50">
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
+    <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+      <div className="px-4 py-4">
         <div className="flex items-center justify-between">
           {/* Status Icons */}
           <div className="flex items-center gap-6">

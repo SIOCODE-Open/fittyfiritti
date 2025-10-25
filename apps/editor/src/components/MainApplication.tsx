@@ -321,23 +321,25 @@ export function MainApplication() {
   }, []) // Only run on mount/unmount
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50 p-2">
       <ErrorDisplay error={error} />
 
-      {/* Main Content Container */}
-      <div className="w-full px-6 py-8">
-        {/* When not recording AND never started recording: Show huge record button in center */}
-        {!isRecording && !hasStartedRecording && !isSystemCapturing && (
+      {/* When not recording AND never started recording: Show huge record button in center */}
+      {!isRecording && !hasStartedRecording && !isSystemCapturing && (
+        <div className="flex-1">
           <WelcomeScreen
             onStartRecording={handleStartRecording}
             isInitializing={isInitializing}
           />
-        )}
+        </div>
+      )}
 
-        {/* When recording OR has started recording OR system capturing: Show two-column layout */}
-        {(isRecording || hasStartedRecording || isSystemCapturing) && (
-          <div className="flex gap-6 h-[calc(100vh-12rem)]">
-            <div className="flex-1">
+      {/* When recording OR has started recording OR system capturing: Show two-column layout */}
+      {(isRecording || hasStartedRecording || isSystemCapturing) && (
+        <div className="flex-1 flex flex-col gap-2 min-h-0">
+          {/* Cards Container - Takes up all available space */}
+          <div className="flex-1 flex gap-2 min-h-0">
+            <div className="flex-1 min-w-0">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
                 <UnifiedTranscriptionStream
                   transcriptionCards={transcriptionCards}
@@ -350,7 +352,7 @@ export function MainApplication() {
               </div>
             </div>
 
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
                 <SubjectDisplay
                   speakerLanguage={speakerLanguage}
@@ -359,22 +361,22 @@ export function MainApplication() {
               </div>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Floating Panel at Bottom - Shows when recording has been started */}
-      {(hasStartedRecording || isSystemCapturing) && (
-        <RecordingControlPanel
-          isRecording={isRecording}
-          isSystemCapturing={isSystemCapturing}
-          onStartRecording={handleStartRecordingWrapper}
-          onStopRecording={handleStopRecording}
-          onStartSystemCapture={handleStartSystemCapture}
-          onStopSystemCapture={handleStopSystemCapture}
-          isInitializing={isInitializing}
-          userSpeaking={vad.userSpeaking}
-          hasSystemAudio={systemAudio.systemSpeaking}
-        />
+          {/* Control Panel - Shrinks to content */}
+          <div className="flex-shrink-0">
+            <RecordingControlPanel
+              isRecording={isRecording}
+              isSystemCapturing={isSystemCapturing}
+              onStartRecording={handleStartRecordingWrapper}
+              onStopRecording={handleStopRecording}
+              onStartSystemCapture={handleStartSystemCapture}
+              onStopSystemCapture={handleStopSystemCapture}
+              isInitializing={isInitializing}
+              userSpeaking={vad.userSpeaking}
+              hasSystemAudio={systemAudio.systemSpeaking}
+            />
+          </div>
+        </div>
       )}
     </div>
   )

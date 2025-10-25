@@ -225,77 +225,68 @@ export function SubjectDisplay({
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header with Navigation and Export */}
-      {currentSubject && (
-        <div className="flex justify-between items-center p-2 border-b border-gray-200">
-          {/* Navigation */}
-          <div className="flex gap-1">
-            <button
-              onClick={handlePrevious}
-              disabled={!canNavigatePrevious}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Previous subject"
-              aria-label="Previous subject"
-            >
-              <Icon icon="mdi:chevron-left" className="w-5 h-5 text-gray-600" />
-            </button>
-            <button
-              onClick={handleNext}
-              disabled={!canNavigateNext}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Next subject"
-              aria-label="Next subject"
-            >
-              <Icon
-                icon="mdi:chevron-right"
-                className="w-5 h-5 text-gray-600"
-              />
-            </button>
-            <div className="flex items-center px-2 text-sm text-gray-600">
-              {currentHistoryIndex + 1} / {subjectHistory.length}
-            </div>
-          </div>
-
-          {/* Export Button */}
-          <button
-            onClick={handleExportMarkdown}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Export all subjects as markdown"
-            aria-label="Export all subjects as markdown"
-          >
-            <Icon icon="mdi:download" className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-      )}
-
-      {/* Presentation State Indicator */}
-      <div className="p-2 border-b border-gray-200 bg-gray-50">
+      {/* Unified Header with Status, Navigation, and Export */}
+      <div className="flex justify-between items-center p-2 border-b border-gray-200 bg-gray-50">
+        {/* Left: Status Icon + Navigation */}
         <div className="flex items-center gap-2">
+          {/* Status Icon */}
           {isPresentationPaused ? (
-            <>
+            <div title="Presentation Paused">
               <Icon
                 icon="mdi:pause-circle"
-                className="w-5 h-5 text-amber-600"
+                className="w-6 h-6 text-amber-600"
               />
-              <span className="text-sm font-medium text-amber-700">
-                Presentation Paused
-              </span>
-              <span className="text-xs text-gray-600">
-                Say "Hey computer, let's start the presentation" to resume
-              </span>
-            </>
+            </div>
           ) : (
-            <>
-              <Icon icon="mdi:play-circle" className="w-5 h-5 text-green-600" />
-              <span className="text-sm font-medium text-green-700">
-                Presentation Running
-              </span>
-              <span className="text-xs text-gray-600">
-                Say "Hey computer, pause the presentation" to pause
-              </span>
-            </>
+            <div title="Presentation Running">
+              <Icon icon="mdi:play-circle" className="w-6 h-6 text-green-600" />
+            </div>
+          )}
+
+          {/* Navigation Controls */}
+          {currentSubject && (
+            <div className="flex gap-1 ml-2">
+              <button
+                onClick={handlePrevious}
+                disabled={!canNavigatePrevious}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Previous subject"
+                aria-label="Previous subject"
+              >
+                <Icon
+                  icon="mdi:chevron-left"
+                  className="w-5 h-5 text-gray-600"
+                />
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={!canNavigateNext}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Next subject"
+                aria-label="Next subject"
+              >
+                <Icon
+                  icon="mdi:chevron-right"
+                  className="w-5 h-5 text-gray-600"
+                />
+              </button>
+              <div className="flex items-center px-2 text-sm text-gray-600">
+                {currentHistoryIndex + 1} / {subjectHistory.length}
+              </div>
+            </div>
           )}
         </div>
+
+        {/* Right: Export Button */}
+        <button
+          onClick={handleExportMarkdown}
+          disabled={subjectHistory.length === 0}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Export all subjects as markdown"
+          aria-label="Export all subjects as markdown"
+        >
+          <Icon icon="mdi:download" className="w-5 h-5 text-gray-600" />
+        </button>
       </div>
 
       {/* Content */}

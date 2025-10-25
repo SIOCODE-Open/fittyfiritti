@@ -130,12 +130,12 @@ export function UnifiedTranscriptionStream({
 
         const lines = [data.original]
         if (shouldShowTranslations && data.translated) {
-          lines.push('', data.translated)
+          lines.push(`  ${data.translated}`)
         }
         return lines.join('\n')
       })
       .filter(Boolean)
-      .join('\n\n')
+      .join('\n\n---\n\n')
 
     if (!content) {
       alert('No transcriptions to export yet!')
@@ -170,17 +170,28 @@ export function UnifiedTranscriptionStream({
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {unifiedCards.map(card => (
-          <UnifiedCardItem
-            key={card.id}
-            card={card}
-            shouldShowTranslations={shouldShowTranslations}
-            speakerLanguage={speakerLanguage}
-            otherPartyLanguage={otherPartyLanguage}
-            onTranscriptionComplete={handleTranscriptionCompleteWrapper}
-            onTranslationComplete={handleTranslationCompleteWrapper}
-          />
-        ))}
+        {unifiedCards.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center p-8">
+              <Icon
+                icon="mdi:microphone-outline"
+                className="w-16 h-16 text-gray-400 mx-auto"
+              />
+            </div>
+          </div>
+        ) : (
+          unifiedCards.map(card => (
+            <UnifiedCardItem
+              key={card.id}
+              card={card}
+              shouldShowTranslations={shouldShowTranslations}
+              speakerLanguage={speakerLanguage}
+              otherPartyLanguage={otherPartyLanguage}
+              onTranscriptionComplete={handleTranscriptionCompleteWrapper}
+              onTranslationComplete={handleTranslationCompleteWrapper}
+            />
+          ))
+        )}
       </div>
     </div>
   )
