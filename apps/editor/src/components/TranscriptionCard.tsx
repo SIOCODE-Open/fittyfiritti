@@ -1,13 +1,12 @@
 import { Icon } from '@iconify/react'
 import { useEffect, useRef, useState } from 'react'
-import { useSystemTranscription } from '../contexts/SystemTranscriptionContext'
 import { useTranscription } from '../contexts/TranscriptionContext'
 import { useTranslation } from '../contexts/TranslationContext'
-import { UnifiedCard } from './UnifiedTranscriptionStream'
+import { TranscriptionCardData } from './TranscriptionStream'
 import { Language } from './WelcomeScreen'
 
-interface UnifiedCardItemProps {
-  card: UnifiedCard
+interface TranscriptionCardProps {
+  card: TranscriptionCardData
   shouldShowTranslations: boolean
   speakerLanguage: Language
   otherPartyLanguage: Language
@@ -19,14 +18,14 @@ interface UnifiedCardItemProps {
   onTranslationComplete?: (cardId: string, translatedText: string) => void
 }
 
-export function UnifiedCardItem({
+export function TranscriptionCard({
   card,
   shouldShowTranslations,
   speakerLanguage,
   otherPartyLanguage,
   onTranscriptionComplete,
   onTranslationComplete,
-}: UnifiedCardItemProps) {
+}: TranscriptionCardProps) {
   const [originalText, setOriginalText] = useState('')
   const [translatedText, setTranslatedText] = useState('')
   const [isTranscribing, setIsTranscribing] = useState(false)
@@ -39,7 +38,6 @@ export function UnifiedCardItem({
   const transcriptionService = useTranscription()
   const { speakerToOtherPartyService, otherPartyToSpeakerService } =
     useTranslation()
-  const systemTranscriptionService = useSystemTranscription()
 
   // Transcription effect
   useEffect(() => {
@@ -53,14 +51,11 @@ export function UnifiedCardItem({
       isTranscribingRef.current = true
       setIsTranscribing(true)
 
-      const service =
-        card.type === 'microphone'
-          ? transcriptionService
-          : systemTranscriptionService
-
       try {
         console.log('📝 Using streaming transcription for card:', card.id)
-        const stream = await service.transcribeStreaming(card.audioSegment)
+        const stream = await transcriptionService.transcribeStreaming(
+          card.audioSegment
+        )
         const reader = stream.getReader()
         let accumulated = ''
 

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSystemAudioAnalysis } from '../contexts/SystemAudioAnalysisContext'
 import { useSystemAudio } from '../contexts/SystemAudioContext'
-import { useSystemTranscription } from '../contexts/SystemTranscriptionContext'
 import { useTranscription } from '../contexts/TranscriptionContext'
 import { useTranscriptionEvents } from '../contexts/TranscriptionEventsContext'
 import { useTranslation } from '../contexts/TranslationContext'
@@ -15,14 +14,13 @@ import { convertAudioToBlob } from '../utils/audioUtils'
 import { ErrorDisplay } from './ErrorDisplay'
 import { RecordingControlPanel } from './RecordingControlPanel'
 import { SubjectDisplay } from './SubjectDisplay'
-import { UnifiedTranscriptionStream } from './UnifiedTranscriptionStream'
+import { TranscriptionStream } from './TranscriptionStream'
 import { Language, WelcomeScreen } from './WelcomeScreen'
 
 export function MainApplication() {
   const transcriptionService = useTranscription()
   const { speakerToOtherPartyService, otherPartyToSpeakerService } =
     useTranslation()
-  const systemTranscriptionService = useSystemTranscription()
   const { publishTranscription } = useTranscriptionEvents()
   const { setIncludeSystemAudioInAnalysis, includeSystemAudioInAnalysis } =
     useSystemAudioAnalysis()
@@ -240,11 +238,6 @@ export function MainApplication() {
       setIsInitializing(true)
       setError(null)
 
-      // Initialize system services
-      await Promise.all([
-        systemTranscriptionService.initialize(otherPartyLanguage),
-      ])
-
       // Set up system audio callbacks
       systemAudio.onAudioSegment(handleSystemAudioSegment)
 
@@ -333,14 +326,12 @@ export function MainApplication() {
       const currentTranscriptionService = transcriptionService
       const currentSpeakerToOtherPartyService = speakerToOtherPartyService
       const currentOtherPartyToSpeakerService = otherPartyToSpeakerService
-      const currentSystemTranscriptionService = systemTranscriptionService
 
       currentVad.pause()
       currentSystemAudio.stop()
       currentTranscriptionService.destroy()
       currentSpeakerToOtherPartyService.destroy()
       currentOtherPartyToSpeakerService.destroy()
-      currentSystemTranscriptionService.destroy()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run on mount/unmount
@@ -366,7 +357,7 @@ export function MainApplication() {
           <div className="flex-1 flex gap-2 min-h-0">
             <div className="flex-1 min-w-0">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
-                <UnifiedTranscriptionStream
+                <TranscriptionStream
                   transcriptionCards={transcriptionCards}
                   systemTranscriptionCards={systemTranscriptionCards}
                   speakerLanguage={speakerLanguage}

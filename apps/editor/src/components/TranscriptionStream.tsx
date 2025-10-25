@@ -1,10 +1,10 @@
 import { Icon } from '@iconify/react'
 import { useRef } from 'react'
 import { SystemTranscriptionCard, TranscriptionCard } from '../types'
-import { UnifiedCardItem } from './UnifiedCardItem'
+import { TranscriptionCard as TranscriptionCardComponent } from './TranscriptionCard'
 import { Language } from './WelcomeScreen'
 
-interface UnifiedTranscriptionStreamProps {
+interface TranscriptionStreamProps {
   transcriptionCards: TranscriptionCard[]
   systemTranscriptionCards: SystemTranscriptionCard[]
   speakerLanguage: Language
@@ -17,7 +17,7 @@ interface UnifiedTranscriptionStreamProps {
   onTranslationComplete?: (cardId: string, translatedText: string) => void
 }
 
-export interface UnifiedCard {
+export interface TranscriptionCardData {
   id: string
   type: 'microphone' | 'system'
   timestamp: number
@@ -32,21 +32,21 @@ interface CardData {
   translated: string
 }
 
-export function UnifiedTranscriptionStream({
+export function TranscriptionStream({
   transcriptionCards,
   systemTranscriptionCards,
   speakerLanguage,
   otherPartyLanguage,
   onTranscriptionComplete,
   onTranslationComplete,
-}: UnifiedTranscriptionStreamProps) {
+}: TranscriptionStreamProps) {
   // Store transcription and translation data in order for export
   const cardDataRef = useRef<CardData[]>([])
 
   // Combine and sort cards by timestamp (newest first)
-  const unifiedCards: UnifiedCard[] = [
+  const unifiedCards: TranscriptionCardData[] = [
     ...transcriptionCards.map(
-      (card): UnifiedCard => ({
+      (card): TranscriptionCardData => ({
         id: card.id,
         type: 'microphone',
         timestamp: card.timestamp,
@@ -55,7 +55,7 @@ export function UnifiedTranscriptionStream({
       })
     ),
     ...systemTranscriptionCards.map(
-      (card): UnifiedCard => ({
+      (card): TranscriptionCardData => ({
         id: card.id,
         type: 'system',
         timestamp: card.timestamp,
@@ -181,7 +181,7 @@ export function UnifiedTranscriptionStream({
           </div>
         ) : (
           unifiedCards.map(card => (
-            <UnifiedCardItem
+            <TranscriptionCardComponent
               key={card.id}
               card={card}
               shouldShowTranslations={shouldShowTranslations}

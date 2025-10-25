@@ -4,7 +4,6 @@ import { AudioCaptureProvider } from './contexts/AudioCaptureContext'
 import { SubjectProvider } from './contexts/SubjectContext'
 import { SystemAudioAnalysisProvider } from './contexts/SystemAudioAnalysisContext'
 import { SystemAudioProvider } from './contexts/SystemAudioContext'
-import { SystemTranscriptionProvider } from './contexts/SystemTranscriptionContext'
 import { TranscriptionProvider } from './contexts/TranscriptionContext'
 import { TranscriptionEventsProvider } from './contexts/TranscriptionEventsContext'
 import { TranslationProvider } from './contexts/TranslationContext'
@@ -18,17 +17,15 @@ function App() {
           <SystemAudioProvider>
             <AudioCaptureProvider>
               <TranscriptionProvider>
-                <SystemTranscriptionProvider>
-                  <TranslationProvider>
-                    <TranscriptionEventsProvider>
-                      <SystemAudioAnalysisProvider>
-                        <SubjectProvider>
-                          <MainApplication />
-                        </SubjectProvider>
-                      </SystemAudioAnalysisProvider>
-                    </TranscriptionEventsProvider>
-                  </TranslationProvider>
-                </SystemTranscriptionProvider>
+                <TranslationProvider>
+                  <TranscriptionEventsProvider>
+                    <SystemAudioAnalysisProvider>
+                      <SubjectProvider>
+                        <MainApplication />
+                      </SubjectProvider>
+                    </SystemAudioAnalysisProvider>
+                  </TranscriptionEventsProvider>
+                </TranslationProvider>
               </TranscriptionProvider>
             </AudioCaptureProvider>
           </SystemAudioProvider>
