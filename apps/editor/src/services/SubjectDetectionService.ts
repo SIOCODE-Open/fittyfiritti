@@ -14,7 +14,24 @@ export interface BulletPoint {
   text: string
 }
 
-export type SubjectAction = SubjectChange | BulletPoint
+export interface PausePresentation {
+  action: 'pausePresentation'
+}
+
+export interface ResumePresentation {
+  action: 'resumePresentation'
+}
+
+export interface NoOperation {
+  action: 'noOperation'
+}
+
+export type SubjectAction =
+  | SubjectChange
+  | BulletPoint
+  | PausePresentation
+  | ResumePresentation
+  | NoOperation
 
 export interface SubjectDetectionResult {
   action: SubjectAction
@@ -22,12 +39,28 @@ export interface SubjectDetectionResult {
 }
 
 // Define the JSON schemas for structured output
-const actionSchema: JSONSchema = {
+const actionSchemaPaused: JSONSchema = {
   type: 'object',
   properties: {
     action: {
       type: 'string',
-      enum: ['changeSubject', 'addBulletPoint'],
+      enum: ['resumePresentation', 'noOperation'],
+    },
+  },
+  required: ['action'],
+}
+
+const actionSchemaRunning: JSONSchema = {
+  type: 'object',
+  properties: {
+    action: {
+      type: 'string',
+      enum: [
+        'pausePresentation',
+        'changeSubject',
+        'addBulletPoint',
+        'noOperation',
+      ],
     },
   },
   required: ['action'],
@@ -56,13 +89,15 @@ const bulletPointSchema: JSONSchema = {
 }
 
 export class SubjectDetectionService {
-  private actionSession: LanguageModelSession | null = null
+  private actionSessionPaused: LanguageModelSession | null = null
+  private actionSessionRunning: LanguageModelSession | null = null
   private titleSession: LanguageModelSession | null = null
   private bulletPointSession: LanguageModelSession | null = null
   private isInitialized = false
   private transcriptionHistory: string[] = []
   private maxHistorySize = 10 // Keep last 10 transcriptions for context
   private activeJobs = new Map<string, Promise<SubjectDetectionResult>>() // Track ongoing analyses
+  private isPresentationPaused = true // Start with presentation paused
 
   async initialize(): Promise<void> {
     if (this.isInitialized) {
@@ -70,23 +105,50 @@ export class SubjectDetectionService {
     }
 
     try {
-      // Initialize action detection session
-      this.actionSession = await createLanguageModelSession({
+      // Initialize action detection session for PAUSED state
+      this.actionSessionPaused = await createLanguageModelSession({
         expectedInputs: [{ type: 'text', languages: ['en'] }],
         expectedOutputs: [{ type: 'text', languages: ['en'] }],
         initialPrompts: [
           {
             role: 'system',
-            content: `You are an action classifier for speech transcriptions.
+            content: `You are an action classifier for speech transcriptions when the presentation is PAUSED.
 
 Your only job is to determine if a transcription represents:
-- "changeSubject": The speaker is clearly starting a NEW topic/subject
-- "addBulletPoint": The speaker is continuing the current topic and providing information
+- "resumePresentation": The speaker is explicitly addressing the computer to start/resume the presentation (e.g., "Hey computer, let's start the presentation", "Computer, begin presentation")
+- "noOperation": Anything else - small talk, greetings, self-introduction, casual conversation, or any other speech
 
 Guidelines:
-- HEAVILY prefer "addBulletPoint" - only use "changeSubject" for clear topic transitions
-- Look for phrases like "now let's talk about", "moving on to", "next topic", "let me discuss"
-- If in doubt, choose "addBulletPoint"
+- ONLY detect "resumePresentation" when the speaker explicitly addresses the computer with keywords like "computer", "start", "begin", "resume", "let's start"
+- Small talk like "how are you doing", "my name is", "hello", etc. should be "noOperation"
+- If in doubt, choose "noOperation"
+
+Respond only with JSON containing the action.`,
+          },
+        ],
+      })
+
+      // Initialize action detection session for RUNNING state
+      this.actionSessionRunning = await createLanguageModelSession({
+        expectedInputs: [{ type: 'text', languages: ['en'] }],
+        expectedOutputs: [{ type: 'text', languages: ['en'] }],
+        initialPrompts: [
+          {
+            role: 'system',
+            content: `You are an action classifier for speech transcriptions when the presentation is RUNNING.
+
+Your only job is to determine if a transcription represents:
+- "pausePresentation": The speaker is explicitly addressing the computer to pause the presentation (e.g., "Hey computer, pause the presentation", "Computer, stop")
+- "changeSubject": The speaker is clearly starting a NEW topic/subject
+- "addBulletPoint": The speaker is continuing the current topic and providing information
+- "noOperation": Small talk, greetings, or unrelated casual conversation
+
+Guidelines:
+- ONLY detect "pausePresentation" when the speaker explicitly addresses the computer with keywords like "computer", "pause", "stop", "halt"
+- HEAVILY prefer "addBulletPoint" over "changeSubject" - only use "changeSubject" for clear topic transitions
+- Look for phrases like "now let's talk about", "moving on to", "next topic" for "changeSubject"
+- Small talk should be "noOperation"
+- If in doubt between "addBulletPoint" and "changeSubject", choose "addBulletPoint"
 
 Respond only with JSON containing the action.`,
           },
@@ -148,7 +210,12 @@ Respond only with JSON containing text.`,
     transcription: string,
     hasSubject: boolean = true
   ): Promise<SubjectDetectionResult> {
-    if (!this.actionSession || !this.titleSession || !this.bulletPointSession) {
+    if (
+      !this.actionSessionPaused ||
+      !this.actionSessionRunning ||
+      !this.titleSession ||
+      !this.bulletPointSession
+    ) {
       throw new Error('Subject Detection Service not initialized')
     }
 
@@ -177,6 +244,17 @@ Respond only with JSON containing text.`,
     return analysisPromise
   }
 
+  setPresentationState(isPaused: boolean): void {
+    this.isPresentationPaused = isPaused
+    console.log(
+      `🎤 Presentation state changed to: ${isPaused ? 'PAUSED' : 'RUNNING'}`
+    )
+  }
+
+  getPresentationState(): boolean {
+    return this.isPresentationPaused
+  }
+
   private async performAnalysis(
     transcription: string,
     hasSubject: boolean
@@ -188,6 +266,35 @@ Respond only with JSON containing text.`,
     }
 
     try {
+      // If presentation is paused, use the paused session
+      if (this.isPresentationPaused) {
+        console.log('🛑 Presentation is PAUSED - checking for resume command')
+        const actionResponse = await this.actionSessionPaused!.prompt(
+          `Transcription: "${transcription}"`,
+          {
+            responseConstraint: actionSchemaPaused,
+          }
+        )
+
+        console.log('🧠 Paused action detection:', actionResponse)
+        const actionResult = JSON.parse(actionResponse)
+
+        if (actionResult.action === 'resumePresentation') {
+          return {
+            action: { action: 'resumePresentation' },
+            confidence: 0.9,
+          }
+        } else {
+          return {
+            action: { action: 'noOperation' },
+            confidence: 0.9,
+          }
+        }
+      }
+
+      // If presentation is running, use the running session
+      console.log('▶️ Presentation is RUNNING - analyzing for actions')
+
       // If no subject exists yet, skip action detection and go straight to title generation
       if (!hasSubject) {
         console.log('🧠 No subject exists - generating initial title')
@@ -221,16 +328,29 @@ Respond only with JSON containing text.`,
 New transcription: "${transcription}"`
 
       // Step 1: Determine the action
-      const actionResponse = await this.actionSession!.prompt(contextPrompt, {
-        responseConstraint: actionSchema,
-      })
+      const actionResponse = await this.actionSessionRunning!.prompt(
+        contextPrompt,
+        {
+          responseConstraint: actionSchemaRunning,
+        }
+      )
 
       console.log('🧠 Step 1 - Action detection:', actionResponse)
       const actionResult = JSON.parse(actionResponse)
 
       let action: SubjectAction
 
-      if (actionResult.action === 'changeSubject') {
+      if (actionResult.action === 'pausePresentation') {
+        return {
+          action: { action: 'pausePresentation' },
+          confidence: 0.9,
+        }
+      } else if (actionResult.action === 'noOperation') {
+        return {
+          action: { action: 'noOperation' },
+          confidence: 0.9,
+        }
+      } else if (actionResult.action === 'changeSubject') {
         // Step 2a: Get the title for subject change
         const titleResponse = await this.titleSession!.prompt(
           `Create a title for this new topic: "${transcription}"`,
@@ -290,11 +410,10 @@ New transcription: "${transcription}"`
     } catch (error) {
       console.error('Failed to analyze transcription:', error)
 
-      // Fallback: assume it's a bullet point if analysis fails
+      // Fallback: assume it's a no-op if analysis fails
       return {
         action: {
-          action: 'addBulletPoint',
-          text: transcription,
+          action: 'noOperation',
         },
         confidence: 0.3,
       }
@@ -343,9 +462,13 @@ New transcription: "${transcription}"`
     this.activeJobs.clear()
 
     // Properly destroy sessions that this service owns
-    if (this.actionSession) {
-      this.actionSession.destroy()
-      this.actionSession = null
+    if (this.actionSessionPaused) {
+      this.actionSessionPaused.destroy()
+      this.actionSessionPaused = null
+    }
+    if (this.actionSessionRunning) {
+      this.actionSessionRunning.destroy()
+      this.actionSessionRunning = null
     }
     if (this.titleSession) {
       this.titleSession.destroy()

@@ -32,6 +32,9 @@ export interface SubjectContextValue {
     bulletPointId: string,
     translation: string
   ) => void
+  isPresentationPaused: boolean
+  pausePresentation: () => void
+  resumePresentation: () => void
 }
 
 const SubjectContext = createContext<SubjectContextValue | null>(null)
@@ -53,6 +56,8 @@ export function SubjectProvider({ children }: SubjectProviderProps) {
   const [currentSubject, setCurrentSubject] = useState<Subject | null>(null)
   const [subjectHistory, setSubjectHistory] = useState<SubjectHistory[]>([])
   const [currentHistoryIndex, setCurrentHistoryIndex] = useState<number>(-1)
+  const [isPresentationPaused, setIsPresentationPaused] =
+    useState<boolean>(true) // Start paused
 
   const changeSubject = (subject: Subject) => {
     setCurrentSubject(subject)
@@ -131,6 +136,16 @@ export function SubjectProvider({ children }: SubjectProviderProps) {
     [currentHistoryIndex]
   )
 
+  const pausePresentation = useCallback(() => {
+    setIsPresentationPaused(true)
+    console.log('🛑 Presentation paused')
+  }, [])
+
+  const resumePresentation = useCallback(() => {
+    setIsPresentationPaused(false)
+    console.log('▶️ Presentation resumed')
+  }, [])
+
   const value: SubjectContextValue = {
     currentSubject,
     changeSubject,
@@ -142,6 +157,9 @@ export function SubjectProvider({ children }: SubjectProviderProps) {
     canNavigateNext,
     updateSubjectTranslation,
     updateBulletPointTranslation,
+    isPresentationPaused,
+    pausePresentation,
+    resumePresentation,
   }
 
   return (

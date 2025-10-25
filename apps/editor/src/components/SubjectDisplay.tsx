@@ -30,6 +30,9 @@ export function SubjectDisplay({
     navigateToHistory,
     canNavigatePrevious,
     canNavigateNext,
+    isPresentationPaused,
+    pausePresentation,
+    resumePresentation,
   } = useSubject()
   const { onTranscriptionComplete } = useTranscriptionEvents()
   const [subjectDetectionService] = useState(
@@ -43,6 +46,11 @@ export function SubjectDisplay({
     subjectDetectionService.initialize().catch(console.error)
     return () => subjectDetectionService.destroy()
   }, [subjectDetectionService])
+
+  // Sync presentation state with service
+  useEffect(() => {
+    subjectDetectionService.setPresentationState(isPresentationPaused)
+  }, [isPresentationPaused, subjectDetectionService])
 
   // Sync bullet points with current history entry
   useEffect(() => {
@@ -59,6 +67,9 @@ export function SubjectDisplay({
   // Handle transcription completion events with simple state updates
   const handleTranscriptionComplete = useCallback(
     async (transcription: CompletedTranscription) => {
+      // Skip analysis entirely if presentation is paused - only listen for resume command
+      // This is handled by the service internally, so we still need to analyze
+
       // Create a unique job key for this transcription
       const jobKey = `analysis-${transcription.id}-${transcription.text.substring(0, 50)}`
 
@@ -79,6 +90,20 @@ export function SubjectDisplay({
           !!currentSubject
         )
 
+        // Handle pause/resume actions
+        if (result.action.action === 'pausePresentation') {
+          pausePresentation()
+          return
+        } else if (result.action.action === 'resumePresentation') {
+          resumePresentation()
+          return
+        } else if (result.action.action === 'noOperation') {
+          // Do nothing - just ignore this transcription
+          console.log('⏭️ No operation - ignoring transcription')
+          return
+        }
+
+        // Only process subject changes and bullet points when presentation is running
         if (result.action.action === 'changeSubject') {
           // Create new subject - this will automatically clear bullet points via useEffect
           const newSubject = {
@@ -123,6 +148,8 @@ export function SubjectDisplay({
       currentSubject,
       changeSubject,
       addBulletPointToHistory,
+      pausePresentation,
+      resumePresentation,
     ]
   )
 
@@ -240,6 +267,36 @@ export function SubjectDisplay({
           </button>
         </div>
       )}
+
+      {/* Presentation State Indicator */}
+      <div className="p-2 border-b border-gray-200 bg-gray-50">
+        <div className="flex items-center gap-2">
+          {isPresentationPaused ? (
+            <>
+              <Icon
+                icon="mdi:pause-circle"
+                className="w-5 h-5 text-amber-600"
+              />
+              <span className="text-sm font-medium text-amber-700">
+                Presentation Paused
+              </span>
+              <span className="text-xs text-gray-600">
+                Say "Hey computer, let's start the presentation" to resume
+              </span>
+            </>
+          ) : (
+            <>
+              <Icon icon="mdi:play-circle" className="w-5 h-5 text-green-600" />
+              <span className="text-sm font-medium text-green-700">
+                Presentation Running
+              </span>
+              <span className="text-xs text-gray-600">
+                Say "Hey computer, pause the presentation" to pause
+              </span>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
