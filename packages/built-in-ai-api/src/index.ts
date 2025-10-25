@@ -337,6 +337,36 @@ export async function transcribeAudio(
   return await session.prompt(prompt, { signal })
 }
 
+// Audio transcription with streaming
+export async function transcribeAudioStreaming(
+  session: LanguageModelSession,
+  audioBlob: Blob,
+  signal?: AbortSignal
+): Promise<ReadableStream<string>> {
+  const prompt: PromptMessage[] = [
+    {
+      role: 'system',
+      content:
+        'You are a precise transcription assistant. Transcribe the audio accurately without any additional commentary.',
+    },
+    {
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          value: 'Please transcribe this audio:',
+        },
+        {
+          type: 'audio',
+          value: audioBlob,
+        },
+      ],
+    },
+  ]
+
+  return session.promptStreaming(prompt, { signal })
+}
+
 // Intent recognition for note organization
 export async function recognizeIntent(
   session: LanguageModelSession,

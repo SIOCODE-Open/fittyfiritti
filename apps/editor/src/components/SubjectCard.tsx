@@ -1,11 +1,11 @@
+import { useEffect, useState } from 'react'
 import type { Subject } from '../contexts/SubjectContext'
-import { useSubjectTranslation } from '../hooks/useSubjectTranslation'
+import { useTranslation } from '../contexts/TranslationContext'
 import { BulletPoint } from './BulletPoint'
 
 export interface BulletPointItem {
   id: string
   text: string
-  emoji?: string
   timestamp: number
 }
 
@@ -15,7 +15,60 @@ interface SubjectCardProps {
 }
 
 export const SubjectCard = ({ subject, bulletPoints }: SubjectCardProps) => {
-  const { titleJa, isTranslating } = useSubjectTranslation(subject.title)
+  const translationService = useTranslation()
+  const [titleJa, setTitleJa] = useState<string>('')
+  const [isTranslating, setIsTranslating] = useState(false)
+
+  useEffect(() => {
+    const translateTitle = async () => {
+      if (!subject.title || !translationService) return
+
+      setIsTranslating(true)
+      setTitleJa('')
+
+      try {
+        if (translationService.translateToTargetLanguageStreaming) {
+          const stream =
+            await translationService.translateToTargetLanguageStreaming(
+              subject.title
+            )
+          const reader = stream.getReader()
+          let accumulatedText = ''
+
+          try {
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+
+              accumulatedText += value
+              setTitleJa(accumulatedText)
+            }
+
+            setIsTranslating(false)
+          } catch (streamError) {
+            console.error('Streaming subject translation failed:', streamError)
+            setIsTranslating(false)
+          }
+        } else {
+          const translation =
+            await translationService.translateToTargetLanguage(subject.title)
+          setTitleJa(translation)
+          setIsTranslating(false)
+        }
+      } catch (error) {
+        console.error('Failed to translate subject title:', error)
+        setIsTranslating(false)
+      }
+    }
+
+    const debounceTimer = setTimeout(() => {
+      translateTitle()
+    }, 100)
+
+    return () => {
+      clearTimeout(debounceTimer)
+    }
+  }, [subject.title, translationService])
 
   return (
     <div className="mb-6">

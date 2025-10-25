@@ -7,16 +7,19 @@ interface UnifiedTranscriptionStreamProps {
   systemTranscriptionCards: SystemTranscriptionCard[]
   speakerLanguage: Language
   otherPartyLanguage: Language
+  onTranscriptionComplete?: (
+    cardId: string,
+    text: string,
+    timestamp: number
+  ) => void
+  onTranslationComplete?: (cardId: string, translatedText: string) => void
 }
 
 export interface UnifiedCard {
   id: string
   type: 'microphone' | 'system'
   timestamp: number
-  originalText?: string
-  translatedText?: string
-  isTranscribing?: boolean
-  isTranslating?: boolean
+  audioSegment: Blob
   sourceCard: TranscriptionCard | SystemTranscriptionCard
 }
 
@@ -25,6 +28,8 @@ export function UnifiedTranscriptionStream({
   systemTranscriptionCards,
   speakerLanguage,
   otherPartyLanguage,
+  onTranscriptionComplete,
+  onTranslationComplete,
 }: UnifiedTranscriptionStreamProps) {
   // Combine and sort cards by timestamp (newest first)
   const unifiedCards: UnifiedCard[] = [
@@ -33,12 +38,7 @@ export function UnifiedTranscriptionStream({
         id: card.id,
         type: 'microphone',
         timestamp: card.timestamp,
-        originalText: card.text,
-        translatedText:
-          speakerLanguage !== otherPartyLanguage ? card.textJa : undefined,
-        isTranscribing: card.isTranscribing,
-        isTranslating:
-          card.isTranslating && speakerLanguage !== otherPartyLanguage,
+        audioSegment: card.audioSegment,
         sourceCard: card,
       })
     ),
@@ -47,12 +47,7 @@ export function UnifiedTranscriptionStream({
         id: card.id,
         type: 'system',
         timestamp: card.timestamp,
-        originalText: card.text,
-        translatedText:
-          speakerLanguage !== otherPartyLanguage ? card.textEn : undefined,
-        isTranscribing: card.isTranscribing,
-        isTranslating:
-          card.isTranslating && speakerLanguage !== otherPartyLanguage,
+        audioSegment: card.audioSegment,
         sourceCard: card,
       })
     ),
@@ -71,6 +66,8 @@ export function UnifiedTranscriptionStream({
             shouldShowTranslations={shouldShowTranslations}
             speakerLanguage={speakerLanguage}
             otherPartyLanguage={otherPartyLanguage}
+            onTranscriptionComplete={onTranscriptionComplete}
+            onTranslationComplete={onTranslationComplete}
           />
         ))}
       </div>

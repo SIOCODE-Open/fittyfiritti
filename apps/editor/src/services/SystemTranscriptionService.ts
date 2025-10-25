@@ -1,8 +1,13 @@
 import type { LanguageModelSession } from '@diai/built-in-ai-api'
-import { createMultiModalSession, transcribeAudio } from '@diai/built-in-ai-api'
+import {
+  createMultiModalSession,
+  transcribeAudio,
+  transcribeAudioStreaming,
+} from '@diai/built-in-ai-api'
 
 export interface SystemTranscriptionService {
   transcribe(audioBlob: Blob): Promise<string>
+  transcribeStreaming(audioBlob: Blob): Promise<ReadableStream<string>>
   initialize(language: 'english' | 'spanish' | 'japanese'): Promise<void>
   destroy(): void
 }
@@ -124,6 +129,37 @@ Your task:
       return cleanedTranscription
     } catch (error) {
       console.error('System transcription failed:', error)
+      throw error
+    }
+  }
+
+  async transcribeStreaming(audioBlob: Blob): Promise<ReadableStream<string>> {
+    if (!this.session) {
+      throw new Error('System transcription service not initialized')
+    }
+
+    try {
+      console.log(
+        `🗾 Starting streaming transcription (expecting ${this.targetLanguage})...`
+      )
+
+      return await transcribeAudioStreaming(
+        this.session,
+        audioBlob,
+        this.abortController?.signal
+      )
+    } catch (error) {
+      console.error('System streaming transcription failed:', error)
+
+      // If it's an abort error, return an empty stream
+      if (error instanceof Error && error.name === 'AbortError') {
+        return new ReadableStream({
+          start(controller) {
+            controller.close()
+          },
+        })
+      }
+
       throw error
     }
   }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useSystemAudioAnalysis } from '../contexts/SystemAudioAnalysisContext'
 import { useSystemAudio } from '../contexts/SystemAudioContext'
 import { useSystemTranscription } from '../contexts/SystemTranscriptionContext'
@@ -45,8 +45,6 @@ export function MainApplication() {
   const [speakerLanguage, setSpeakerLanguage] = useState<Language>('english')
   const [otherPartyLanguage, setOtherPartyLanguage] =
     useState<Language>('japanese')
-  const currentLoadingCardId = useRef<string | null>(null)
-  const currentSystemLoadingCardId = useRef<string | null>(null)
 
   // Generate unique IDs
   const generateId = useCallback(
@@ -54,323 +52,88 @@ export function MainApplication() {
     []
   )
 
-  // Async translation helper with streaming and job deduplication
-  const translateTextAsync = useCallback(
-    (cardId: string, text: string) => {
-      // Only translate if languages differ
-      if (speakerLanguage === otherPartyLanguage) {
-        return
-      }
+  // Callback to handle completed transcriptions for subject detection
+  const handleTranscriptionComplete = useCallback(
+    (cardId: string, text: string, timestamp: number) => {
+      console.log('Transcription complete for card:', cardId, 'Text:', text)
 
-      setTranscriptionCards(prev =>
-        prev.map(card =>
-          card.id === cardId
-            ? { ...card, isTranslating: true, textJa: '' }
-            : card
-        )
+      // Determine if this is a system card by checking if it exists in systemTranscriptionCards
+      const isSystemCard = systemTranscriptionCards.some(
+        card => card.id === cardId
       )
 
-      // Check if streaming is available, otherwise fall back to regular translation
-      if (translationService.translateToTargetLanguageStreaming) {
-        translationService
-          .translateToTargetLanguageStreaming(text)
-          .then(async stream => {
-            const reader = stream.getReader()
-            let accumulatedText = ''
-
-            try {
-              while (true) {
-                const { done, value } = await reader.read()
-                if (done) break
-
-                accumulatedText += value
-
-                // Update UI with streaming text
-                setTranscriptionCards(prev =>
-                  prev.map(card =>
-                    card.id === cardId
-                      ? { ...card, textJa: accumulatedText }
-                      : card
-                  )
-                )
-              }
-
-              // Mark translation as complete
-              setTranscriptionCards(prev =>
-                prev.map(card =>
-                  card.id === cardId ? { ...card, isTranslating: false } : card
-                )
-              )
-            } catch (error) {
-              console.error('Streaming translation failed:', error)
-              setTranscriptionCards(prev =>
-                prev.map(card =>
-                  card.id === cardId ? { ...card, isTranslating: false } : card
-                )
-              )
-            }
-          })
-          .catch(error => {
-            console.error('Failed to start streaming translation:', error)
-            setTranscriptionCards(prev =>
-              prev.map(card =>
-                card.id === cardId ? { ...card, isTranslating: false } : card
-              )
-            )
-          })
-      } else {
-        // Fallback to regular translation
-        translationService
-          .translateToTargetLanguage(text)
-          .then(translation => {
-            setTranscriptionCards(prev =>
-              prev.map(card =>
-                card.id === cardId
-                  ? { ...card, textJa: translation, isTranslating: false }
-                  : card
-              )
-            )
-          })
-          .catch(error => {
-            console.error('Translation failed:', error)
-            setTranscriptionCards(prev =>
-              prev.map(card =>
-                card.id === cardId ? { ...card, isTranslating: false } : card
-              )
-            )
-          })
+      // Only publish for subject analysis if:
+      // - It's a microphone card (always include user speech), OR
+      // - It's a system card AND includeSystemAudioInAnalysis is enabled
+      if (!isSystemCard || includeSystemAudioInAnalysis) {
+        publishTranscription({
+          id: cardId,
+          text: text,
+          timestamp: timestamp,
+        })
       }
     },
-    [translationService, speakerLanguage, otherPartyLanguage]
+    [
+      publishTranscription,
+      includeSystemAudioInAnalysis,
+      systemTranscriptionCards,
+    ]
   )
 
-  // System translation helper (Japanese to English) with streaming
-  const translateSystemTextAsync = useCallback(
-    (cardId: string, text: string) => {
-      // Only translate if languages differ
-      if (speakerLanguage === otherPartyLanguage) {
-        return
-      }
-
-      setSystemTranscriptionCards(prev =>
-        prev.map(card =>
-          card.id === cardId
-            ? { ...card, isTranslating: true, textEn: '' }
-            : card
-        )
+  // Callback to handle completed translations (optional, for logging or other purposes)
+  const handleTranslationComplete = useCallback(
+    (cardId: string, translatedText: string) => {
+      console.log(
+        'Translation complete for card:',
+        cardId,
+        'Translation:',
+        translatedText
       )
-
-      // Check if streaming is available, otherwise fall back to regular translation
-      if (systemTranslationService.translateToEnglishStreaming) {
-        systemTranslationService
-          .translateToEnglishStreaming(text)
-          .then(async stream => {
-            const reader = stream.getReader()
-            let accumulatedText = ''
-
-            try {
-              while (true) {
-                const { done, value } = await reader.read()
-                if (done) break
-
-                accumulatedText += value
-
-                // Update UI with streaming text
-                setSystemTranscriptionCards(prev =>
-                  prev.map(card =>
-                    card.id === cardId
-                      ? { ...card, textEn: accumulatedText }
-                      : card
-                  )
-                )
-              }
-
-              // Mark translation as complete
-              setSystemTranscriptionCards(prev =>
-                prev.map(card =>
-                  card.id === cardId ? { ...card, isTranslating: false } : card
-                )
-              )
-            } catch (error) {
-              console.error('Streaming system translation failed:', error)
-              setSystemTranscriptionCards(prev =>
-                prev.map(card =>
-                  card.id === cardId ? { ...card, isTranslating: false } : card
-                )
-              )
-            }
-          })
-          .catch(error => {
-            console.error(
-              'Failed to start streaming system translation:',
-              error
-            )
-            setSystemTranscriptionCards(prev =>
-              prev.map(card =>
-                card.id === cardId ? { ...card, isTranslating: false } : card
-              )
-            )
-          })
-      } else {
-        // Fallback to regular translation
-        systemTranslationService
-          .translateToEnglish(text)
-          .then(translation => {
-            setSystemTranscriptionCards(prev =>
-              prev.map(card =>
-                card.id === cardId
-                  ? { ...card, textEn: translation, isTranslating: false }
-                  : card
-              )
-            )
-          })
-          .catch(error => {
-            console.error('System translation failed:', error)
-            setSystemTranscriptionCards(prev =>
-              prev.map(card =>
-                card.id === cardId ? { ...card, isTranslating: false } : card
-              )
-            )
-          })
-      }
     },
-    [systemTranslationService, speakerLanguage, otherPartyLanguage]
+    []
   )
 
   const handleAudioChunk = useCallback(
     async (chunk: AudioChunk) => {
       try {
-        // Use the ref to find the correct loading card
-        const loadingCardId = currentLoadingCardId.current
-
-        if (!loadingCardId) {
-          console.warn('No loading card ID available for audio chunk')
-          return
-        }
-
-        // Clear the ref since we're processing this card
-        currentLoadingCardId.current = null
-
-        // Transcribe audio
-        const transcription = await transcriptionService.transcribe(chunk.blob)
-
-        if (!transcription.trim()) {
-          // If transcription is empty, remove the loading card
-          setTranscriptionCards(prev =>
-            prev.filter(card => card.id !== loadingCardId)
-          )
-          return
-        }
-
-        // Update the loading card with transcription
-        setTranscriptionCards(prev =>
-          prev.map(card =>
-            card.id === loadingCardId
-              ? {
-                  ...card,
-                  text: transcription,
-                  isTranscribing: false,
-                  isTranslating: speakerLanguage !== otherPartyLanguage,
-                  waveformData: chunk.waveformData || card.waveformData,
-                }
-              : card
-          )
-        )
-
-        // Publish completed transcription for subject analysis
-        publishTranscription({
-          id: loadingCardId,
-          text: transcription,
+        // Create a new transcription card with just the audio segment
+        const cardId = generateId()
+        const newCard: TranscriptionCard = {
+          id: cardId,
+          audioSegment: chunk.blob,
           timestamp: Date.now(),
-        })
-
-        // Start async translation only if languages differ
-        if (speakerLanguage !== otherPartyLanguage) {
-          translateTextAsync(loadingCardId, transcription)
         }
+
+        // Add the card immediately - it will handle its own transcription
+        setTranscriptionCards(prev => [...prev, newCard])
       } catch (error) {
-        console.error('Failed to process audio chunk:', error)
+        console.error('Failed to create transcription card:', error)
         setError('Failed to process audio. Please try again.')
       }
     },
-    [
-      transcriptionService,
-      translateTextAsync,
-      publishTranscription,
-      speakerLanguage,
-      otherPartyLanguage,
-    ]
+    [generateId]
   )
 
-  // Handle system audio chunks (Japanese transcription)
+  // Handle system audio chunks
   const handleSystemAudioChunk = useCallback(
     async (chunk: AudioChunk) => {
       try {
-        // Use the ref to find the correct loading card
-        const loadingCardId = currentSystemLoadingCardId.current
-
-        if (!loadingCardId) {
-          console.warn('No system loading card ID available for audio chunk')
-          return
+        // Create a new system transcription card with just the audio segment
+        const cardId = generateId()
+        const newCard: SystemTranscriptionCard = {
+          id: cardId,
+          audioSegment: chunk.blob,
+          timestamp: Date.now(),
         }
 
-        // Clear the ref since we're processing this card
-        currentSystemLoadingCardId.current = null
-
-        // Transcribe audio as Japanese
-        const transcription = await systemTranscriptionService.transcribe(
-          chunk.blob
-        )
-
-        if (!transcription.trim()) {
-          // If transcription is empty, remove the loading card
-          setSystemTranscriptionCards(prev =>
-            prev.filter(card => card.id !== loadingCardId)
-          )
-          return
-        }
-
-        // Update the loading card with Japanese transcription
-        setSystemTranscriptionCards(prev =>
-          prev.map(card =>
-            card.id === loadingCardId
-              ? {
-                  ...card,
-                  text: transcription,
-                  isTranscribing: false,
-                  isTranslating: speakerLanguage !== otherPartyLanguage,
-                  waveformData: chunk.waveformData || card.waveformData,
-                }
-              : card
-          )
-        )
-
-        // Start async translation to English only if languages differ
-        if (speakerLanguage !== otherPartyLanguage) {
-          translateSystemTextAsync(loadingCardId, transcription)
-        }
-
-        // Publish completed system transcription for subject analysis only if enabled
-        if (includeSystemAudioInAnalysis) {
-          publishTranscription({
-            id: loadingCardId,
-            text: transcription,
-            timestamp: Date.now(),
-          })
-        }
+        // Add the card immediately - it will handle its own transcription
+        setSystemTranscriptionCards(prev => [...prev, newCard])
       } catch (error) {
-        console.error('Failed to process system audio chunk:', error)
+        console.error('Failed to create system transcription card:', error)
         setError('Failed to process system audio. Please try again.')
       }
     },
-    [
-      systemTranscriptionService,
-      translateSystemTextAsync,
-      publishTranscription,
-      speakerLanguage,
-      otherPartyLanguage,
-      includeSystemAudioInAnalysis,
-    ]
+    [generateId]
   )
 
   // Handle VAD speech detection
@@ -378,20 +141,6 @@ export function MainApplication() {
     async (audioData: Float32Array) => {
       try {
         console.log('🗣️ Processing speech end, audio length:', audioData.length)
-
-        // Create a loading card immediately
-        const cardId = generateId()
-        const newCard: TranscriptionCard = {
-          id: cardId,
-          timestamp: Date.now(),
-          isTranscribing: true,
-          waveformData: [], // We'll update this with actual waveform if needed
-        }
-
-        // Store the card ID for the audio processing
-        currentLoadingCardId.current = cardId
-
-        setTranscriptionCards(prev => [...prev, newCard])
 
         // Convert VAD audio to blob
         const audioBlob = convertAudioToBlob(audioData)
@@ -402,7 +151,6 @@ export function MainApplication() {
           timestamp: Date.now(),
           windowStart: Date.now() - (audioData.length / 16000) * 1000, // Estimate start time
           windowEnd: Date.now(),
-          waveformData: [], // Could convert audioData to waveform if needed
         }
 
         // Process the audio chunk
@@ -412,7 +160,7 @@ export function MainApplication() {
         setError('Failed to process speech. Please try again.')
       }
     },
-    [generateId, handleAudioChunk]
+    [handleAudioChunk]
   )
 
   // Handle system audio segment completion
@@ -421,28 +169,14 @@ export function MainApplication() {
       try {
         console.log('🖥️ Processing system audio segment')
 
-        // Create a loading card immediately
-        const cardId = generateId()
-        const newCard: SystemTranscriptionCard = {
-          id: cardId,
-          timestamp: Date.now(),
-          isTranscribing: true,
-          waveformData: audioChunk.waveformData || [],
-        }
-
-        // Store the card ID for the audio processing
-        currentSystemLoadingCardId.current = cardId
-
-        setSystemTranscriptionCards(prev => [...prev, newCard])
-
-        // Process the audio chunk
+        // Process the audio chunk - it will create a card internally
         await handleSystemAudioChunk(audioChunk)
       } catch (error) {
         console.error('Failed to process system audio segment:', error)
         setError('Failed to process system audio. Please try again.')
       }
     },
-    [generateId, handleSystemAudioChunk]
+    [handleSystemAudioChunk]
   )
 
   const handleSpeechStart = useCallback(() => {
@@ -478,7 +212,7 @@ export function MainApplication() {
       vad.onSpeechStart(handleSpeechStart)
 
       // Start VAD listening
-      vad.start()
+      await vad.start()
 
       setIsRecording(true)
       setHasStartedRecording(true) // Mark that recording has been started at least once
@@ -605,6 +339,8 @@ export function MainApplication() {
                   systemTranscriptionCards={systemTranscriptionCards}
                   speakerLanguage={speakerLanguage}
                   otherPartyLanguage={otherPartyLanguage}
+                  onTranscriptionComplete={handleTranscriptionComplete}
+                  onTranslationComplete={handleTranslationComplete}
                 />
               </div>
             </div>

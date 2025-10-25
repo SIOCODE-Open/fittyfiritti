@@ -84,9 +84,7 @@ The project uses **Turbo** as a build orchestrator with the following key comman
 
 Before any code changes or commits, AI agents MUST run:
 
-1. **`pnpm lint`** - Full linting across all projects
-2. **`pnpm format`** - Code formatting across all projects  
-3. **`pnpm type-check`** - TypeScript type checking across all projects
+**`pnpm quality-check`** - Runs lint, format, type-check, and build in a single command
 
 ### Acceptable Commands:
 - `pnpm build` - Building the project
@@ -110,10 +108,8 @@ Before any code changes or commits, AI agents MUST run:
    - Ensure all imports and dependencies are properly managed
 
 3. **After making changes**:
-   - Run `pnpm lint` and fix any linting errors
-   - Run `pnpm format` to ensure consistent formatting
-   - Run `pnpm type-check` to verify TypeScript compilation
-   - Run `pnpm build` to ensure the project builds successfully
+   - Run `pnpm quality-check` to ensure code quality (runs lint, format, type-check, and build)
+   - Fix any errors or warnings reported by the quality check
 
 ## Key Technical Considerations
 

@@ -9,6 +9,7 @@
     "lint": "turbo lint",
     "format": "turbo format",
     "type-check": "turbo type-check",
+    "quality-check": "turbo quality-check",
     "test": "turbo test",
     "test:ui": "turbo test:ui",
     "test:headed": "turbo test:headed",

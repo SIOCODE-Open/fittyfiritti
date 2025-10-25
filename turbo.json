@@ -22,6 +22,11 @@
       "outputs": [],
       "cache": false
     },
+    "quality-check": {
+      "dependsOn": ["lint", "format", "type-check", "build"],
+      "outputs": [],
+      "cache": false
+    },
     "test": {
       "dependsOn": ["^build"],
       "outputs": ["test-results/**", "playwright-report/**"]

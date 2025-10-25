@@ -1,4 +1,5 @@
-import { useBulletPointTranslation } from '../hooks/useBulletPointTranslation'
+import { useEffect, useState } from 'react'
+import { useTranslation } from '../contexts/TranslationContext'
 import type { BulletPointItem } from './SubjectCard'
 
 interface BulletPointProps {
@@ -6,7 +7,63 @@ interface BulletPointProps {
 }
 
 export function BulletPoint({ bulletPoint }: BulletPointProps) {
-  const { textJa, isTranslating } = useBulletPointTranslation(bulletPoint.text)
+  const translationService = useTranslation()
+  const [textJa, setTextJa] = useState<string>('')
+  const [isTranslating, setIsTranslating] = useState(false)
+
+  useEffect(() => {
+    const translateText = async () => {
+      if (!bulletPoint.text || !translationService) return
+
+      setIsTranslating(true)
+      setTextJa('')
+
+      try {
+        if (translationService.translateToTargetLanguageStreaming) {
+          const stream =
+            await translationService.translateToTargetLanguageStreaming(
+              bulletPoint.text
+            )
+          const reader = stream.getReader()
+          let accumulatedText = ''
+
+          try {
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+
+              accumulatedText += value
+              setTextJa(accumulatedText)
+            }
+
+            setIsTranslating(false)
+          } catch (streamError) {
+            console.error(
+              'Streaming bullet point translation failed:',
+              streamError
+            )
+            setIsTranslating(false)
+          }
+        } else {
+          const translation =
+            await translationService.translateToTargetLanguage(bulletPoint.text)
+          setTextJa(translation)
+          setIsTranslating(false)
+        }
+      } catch (error) {
+        console.error('Failed to translate bullet point text:', error)
+        setIsTranslating(false)
+      }
+    }
+
+    const debounceTimer = setTimeout(() => {
+      translateText()
+    }, 100)
+
+    return () => {
+      clearTimeout(debounceTimer)
+    }
+  }, [bulletPoint.text, translationService])
 
   return (
     <div className="mb-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">

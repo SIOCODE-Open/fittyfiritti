@@ -48,8 +48,10 @@ export function SubjectDisplay() {
       setIsAnalyzing(true)
 
       try {
+        // Pass whether we have a current subject to optimize the analysis
         const result = await subjectDetectionService.analyzeTranscription(
-          transcription.text
+          transcription.text,
+          !!currentSubject
         )
 
         if (result.action.action === 'changeSubject') {
@@ -78,7 +80,6 @@ export function SubjectDisplay() {
           const bulletPoint: BulletPointItem = {
             id: Math.random().toString(36).substr(2, 9),
             text: result.action.text,
-            emoji: result.action.emoji,
             timestamp: Date.now(),
           }
           setBulletPoints(prev => [...prev, bulletPoint])

@@ -12,7 +12,6 @@ export interface SubjectChange {
 export interface BulletPoint {
   action: 'addBulletPoint'
   text: string
-  emoji?: string
 }
 
 export type SubjectAction = SubjectChange | BulletPoint
@@ -51,10 +50,6 @@ const bulletPointSchema: JSONSchema = {
     text: {
       type: 'string',
       description: 'Summary text for the bullet point',
-    },
-    emoji: {
-      type: 'string',
-      description: 'Single emoji that represents this bullet point',
     },
   },
   required: ['text'],
@@ -129,15 +124,14 @@ Respond only with JSON containing the title.`,
             role: 'system',
             content: `You create concise bullet points from speech transcriptions.
 
-Extract the key information and create a clear, factual bullet point with an appropriate emoji.
+Extract the key information and create a clear, factual bullet point.
 
 Guidelines:
 - Focus on specific facts, features, or actions mentioned
 - Keep text concise (5-15 words)
-- Choose relevant emojis (🔧 for technical, 📝 for documentation, 🎤 for audio, etc.)
 - Extract concrete information, not general statements
 
-Respond only with JSON containing text and emoji.`,
+Respond only with JSON containing text.`,
           },
         ],
       })
@@ -151,7 +145,8 @@ Respond only with JSON containing text and emoji.`,
   }
 
   async analyzeTranscription(
-    transcription: string
+    transcription: string,
+    hasSubject: boolean = true
   ): Promise<SubjectDetectionResult> {
     if (!this.actionSession || !this.titleSession || !this.bulletPointSession) {
       throw new Error('Subject Detection Service not initialized')
@@ -171,7 +166,7 @@ Respond only with JSON containing text and emoji.`,
     }
 
     // Create new analysis promise and track it
-    const analysisPromise = this.performAnalysis(transcription)
+    const analysisPromise = this.performAnalysis(transcription, hasSubject)
     this.activeJobs.set(jobKey, analysisPromise)
 
     // Clean up tracking when job completes
@@ -183,22 +178,48 @@ Respond only with JSON containing text and emoji.`,
   }
 
   private async performAnalysis(
-    transcription: string
+    transcription: string,
+    hasSubject: boolean
   ): Promise<SubjectDetectionResult> {
-    // Create context from recent transcriptions
-    const context = this.transcriptionHistory.slice(-5).join(' | ')
-
     // Add to transcription history
     this.transcriptionHistory.push(transcription)
     if (this.transcriptionHistory.length > this.maxHistorySize) {
       this.transcriptionHistory.shift()
     }
 
-    const contextPrompt = `Context (recent transcriptions): ${context}
+    try {
+      // If no subject exists yet, skip action detection and go straight to title generation
+      if (!hasSubject) {
+        console.log('🧠 No subject exists - generating initial title')
+        const titleResponse = await this.titleSession!.prompt(
+          `Create a title for this conversation topic based on the first message: "${transcription}"`,
+          {
+            responseConstraint: titleSchema,
+          }
+        )
+
+        console.log('🧠 Initial title generation:', titleResponse)
+        const titleResult = JSON.parse(titleResponse)
+
+        const action: SubjectAction = {
+          action: 'changeSubject',
+          title: titleResult.title?.trim() || 'General Discussion',
+        }
+
+        console.log('🧠 Final action:', action)
+
+        return {
+          action,
+          confidence: 0.8,
+        }
+      }
+
+      // Create context from recent transcriptions
+      const context = this.transcriptionHistory.slice(-5).join(' | ')
+      const contextPrompt = `Context (recent transcriptions): ${context}
 
 New transcription: "${transcription}"`
 
-    try {
       // Step 1: Determine the action
       const actionResponse = await this.actionSession!.prompt(contextPrompt, {
         responseConstraint: actionSchema,
@@ -235,7 +256,6 @@ New transcription: "${transcription}"`
           action = {
             action: 'addBulletPoint',
             text: bulletResult.text || transcription,
-            emoji: bulletResult.emoji || '💬',
           }
         } else {
           action = {
@@ -258,7 +278,6 @@ New transcription: "${transcription}"`
         action = {
           action: 'addBulletPoint',
           text: bulletResult.text || transcription,
-          emoji: bulletResult.emoji || '💬',
         }
       }
 
@@ -276,7 +295,6 @@ New transcription: "${transcription}"`
         action: {
           action: 'addBulletPoint',
           text: transcription,
-          emoji: '💬',
         },
         confidence: 0.3,
       }

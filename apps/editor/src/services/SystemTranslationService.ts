@@ -22,7 +22,7 @@ interface SystemStreamingTranslationJob {
 
 export interface SystemTranslationService {
   translateToEnglish(text: string): Promise<string>
-  translateToEnglishStreaming?(text: string): Promise<ReadableStream<string>>
+  translateToEnglishStreaming(text: string): Promise<ReadableStream<string>>
   initialize(sourceLanguage?: 'english' | 'spanish' | 'japanese'): Promise<void>
   destroy(): void
 }

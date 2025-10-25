@@ -1,23 +1,15 @@
 // Note Structure Types
 export interface TranscriptionCard {
   id: string
-  text?: string // Optional since it starts as loading
-  textJa?: string
+  audioSegment: Blob
   timestamp: number
-  isTranscribing?: boolean
-  isTranslating?: boolean
-  waveformData?: number[] // Waveform amplitude data
 }
 
-// System Audio Transcription Card (Japanese->English)
+// System Audio Transcription Card
 export interface SystemTranscriptionCard {
   id: string
-  text?: string // Japanese text - Optional since it starts as loading
-  textEn?: string // English translation
+  audioSegment: Blob
   timestamp: number
-  isTranscribing?: boolean
-  isTranslating?: boolean
-  waveformData?: number[] // Waveform amplitude data
 }
 
 // Application State
@@ -49,13 +41,14 @@ export interface AudioCaptureService {
 
 export interface TranscriptionService {
   transcribe(audioBlob: Blob): Promise<string>
+  transcribeStreaming(audioBlob: Blob): Promise<ReadableStream<string>>
   initialize(): Promise<void>
   destroy(): void
 }
 
 export interface TranslationService {
   translateToTargetLanguage(text: string): Promise<string>
-  translateToTargetLanguageStreaming?(
+  translateToTargetLanguageStreaming(
     text: string
   ): Promise<ReadableStream<string>>
   initialize(targetLanguage?: 'english' | 'spanish' | 'japanese'): Promise<void>
@@ -77,7 +70,7 @@ export interface TranslationRequest {
 
 export interface MultiLanguageTranslationService {
   translate(request: TranslationRequest): Promise<string>
-  translateStreaming?(
+  translateStreaming(
     request: TranslationRequest
   ): Promise<ReadableStream<string>>
   getAvailableLanguagePairs(): Promise<LanguagePair[]>
