@@ -49,6 +49,9 @@ export interface TranslationService {
   translateToTargetLanguageStreaming(
     text: string
   ): Promise<ReadableStream<string>>
-  initialize(targetLanguage?: 'english' | 'spanish' | 'japanese'): Promise<void>
+  initialize(
+    sourceLanguage?: 'english' | 'spanish' | 'japanese',
+    targetLanguage?: 'english' | 'spanish' | 'japanese'
+  ): Promise<void>
   destroy(): void
 }

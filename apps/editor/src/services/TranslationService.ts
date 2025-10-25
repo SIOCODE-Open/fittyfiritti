@@ -22,11 +22,14 @@ export class TranslationServiceImpl implements TranslationService {
     Promise<ReadableStream<string>>
   >() // Track ongoing streaming jobs
   private isInitialized = false
+  private sourceLanguage: 'english' | 'spanish' | 'japanese' = 'english'
   private targetLanguage: 'english' | 'spanish' | 'japanese' = 'japanese'
 
   async initialize(
+    sourceLanguage: 'english' | 'spanish' | 'japanese' = 'english',
     targetLanguage: 'english' | 'spanish' | 'japanese' = 'japanese'
   ): Promise<void> {
+    this.sourceLanguage = sourceLanguage
     this.targetLanguage = targetLanguage
 
     try {
@@ -39,17 +42,18 @@ export class TranslationServiceImpl implements TranslationService {
         japanese: { code: 'ja', name: 'Japanese' },
       }
 
-      const config = languageConfig[targetLanguage]
+      const sourceConfig = languageConfig[sourceLanguage]
+      const targetConfig = languageConfig[targetLanguage]
 
       // Check if Translation API is available
       const isAvailable = await checkTranslatorAvailability()
       if (isAvailable) {
         console.log(
-          `🌐 Translation service initialized with Translator API (English to ${config.name})`
+          `🌐 Translation service initialized with Translator API (${sourceConfig.name} to ${targetConfig.name})`
         )
       } else {
         console.log(
-          `🌐 Translation service initialized with fallback mode (Prompt API, English to ${config.name})`
+          `🌐 Translation service initialized with fallback mode (Prompt API, ${sourceConfig.name} to ${targetConfig.name})`
         )
       }
 
@@ -71,6 +75,20 @@ export class TranslationServiceImpl implements TranslationService {
     if (!text.trim()) {
       return new ReadableStream({
         start(controller) {
+          controller.close()
+        },
+      })
+    }
+
+    // Check if translation is needed (source and target languages are different)
+    const needsTranslation = this.sourceLanguage !== this.targetLanguage
+    if (!needsTranslation) {
+      console.log(
+        '📝 Source and target languages are the same, returning as-is'
+      )
+      return new ReadableStream({
+        start(controller) {
+          controller.enqueue(text)
           controller.close()
         },
       })
@@ -152,13 +170,13 @@ export class TranslationServiceImpl implements TranslationService {
 
         const stream = await translateTextStreaming(
           item.text,
-          'en', // From English
+          languageConfig[this.sourceLanguage], // From source language
           languageConfig[this.targetLanguage], // To target language
           this.abortController?.signal
         )
 
         console.log(
-          `🌐 Streaming translation started: "${item.text.substring(0, 30)}..."`
+          `🌐 Streaming translation started (${this.sourceLanguage.toUpperCase()}→${this.targetLanguage.toUpperCase()}): "${item.text.substring(0, 30)}..."`
         )
         item.resolve(stream)
       } catch (error) {

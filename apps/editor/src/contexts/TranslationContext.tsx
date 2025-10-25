@@ -4,7 +4,10 @@ import { TranslationServiceImpl } from '../services/TranslationService'
 import { TranslationService } from '../types'
 
 interface TranslationContextType {
-  translationService: TranslationService
+  // Service for translating from speaker language to other party language (microphone cards)
+  speakerToOtherPartyService: TranslationService
+  // Service for translating from other party language to speaker language (system audio cards)
+  otherPartyToSpeakerService: TranslationService
 }
 
 const TranslationContext = createContext<TranslationContextType | null>(null)
@@ -14,13 +17,21 @@ interface TranslationProviderProps {
 }
 
 export function TranslationProvider({ children }: TranslationProviderProps) {
-  const translationService = useMemo(() => new TranslationServiceImpl(), [])
+  const speakerToOtherPartyService = useMemo(
+    () => new TranslationServiceImpl(),
+    []
+  )
+  const otherPartyToSpeakerService = useMemo(
+    () => new TranslationServiceImpl(),
+    []
+  )
 
   const value = useMemo(
     () => ({
-      translationService,
+      speakerToOtherPartyService,
+      otherPartyToSpeakerService,
     }),
-    [translationService]
+    [speakerToOtherPartyService, otherPartyToSpeakerService]
   )
 
   return (
@@ -30,10 +41,10 @@ export function TranslationProvider({ children }: TranslationProviderProps) {
   )
 }
 
-export function useTranslation(): TranslationService {
+export function useTranslation(): TranslationContextType {
   const context = useContext(TranslationContext)
   if (!context) {
     throw new Error('useTranslation must be used within a TranslationProvider')
   }
-  return context.translationService
+  return context
 }

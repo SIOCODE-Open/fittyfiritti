@@ -7,19 +7,21 @@ interface SubjectTranslationState {
 }
 
 export function useSubjectTranslation(title: string) {
-  const translationService = useTranslation()
+  const { speakerToOtherPartyService } = useTranslation()
   const [state, setState] = useState<SubjectTranslationState>({
     isTranslating: false,
   })
 
   const translateTitle = useCallback(async () => {
-    if (!title || !translationService) return
+    if (!title || !speakerToOtherPartyService) return
 
     setState(prev => ({ ...prev, isTranslating: true, titleJa: '' }))
 
     try {
       const stream =
-        await translationService.translateToTargetLanguageStreaming(title)
+        await speakerToOtherPartyService.translateToTargetLanguageStreaming(
+          title
+        )
       const reader = stream.getReader()
       let accumulatedText = ''
 
@@ -44,7 +46,7 @@ export function useSubjectTranslation(title: string) {
       console.error('Failed to translate subject title:', error)
       setState(prev => ({ ...prev, isTranslating: false }))
     }
-  }, [title, translationService])
+  }, [title, speakerToOtherPartyService])
 
   // Auto-translate when title changes, with debouncing
   useEffect(() => {

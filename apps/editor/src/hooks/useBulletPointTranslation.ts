@@ -7,19 +7,21 @@ interface BulletPointTranslationState {
 }
 
 export function useBulletPointTranslation(text: string) {
-  const translationService = useTranslation()
+  const { speakerToOtherPartyService } = useTranslation()
   const [state, setState] = useState<BulletPointTranslationState>({
     isTranslating: false,
   })
 
   const translateText = useCallback(async () => {
-    if (!text || !translationService) return
+    if (!text || !speakerToOtherPartyService) return
 
     setState(prev => ({ ...prev, isTranslating: true, textJa: '' }))
 
     try {
       const stream =
-        await translationService.translateToTargetLanguageStreaming(text)
+        await speakerToOtherPartyService.translateToTargetLanguageStreaming(
+          text
+        )
       const reader = stream.getReader()
       let accumulatedText = ''
 
@@ -44,7 +46,7 @@ export function useBulletPointTranslation(text: string) {
       console.error('Failed to translate bullet point text:', error)
       setState(prev => ({ ...prev, isTranslating: false }))
     }
-  }, [text, translationService])
+  }, [text, speakerToOtherPartyService])
 
   // Auto-translate when text changes, with debouncing
   useEffect(() => {

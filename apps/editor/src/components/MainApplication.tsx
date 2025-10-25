@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSystemAudioAnalysis } from '../contexts/SystemAudioAnalysisContext'
 import { useSystemAudio } from '../contexts/SystemAudioContext'
 import { useSystemTranscription } from '../contexts/SystemTranscriptionContext'
-import { useSystemTranslation } from '../contexts/SystemTranslationContext'
 import { useTranscription } from '../contexts/TranscriptionContext'
 import { useTranscriptionEvents } from '../contexts/TranscriptionEventsContext'
 import { useTranslation } from '../contexts/TranslationContext'
@@ -21,9 +20,9 @@ import { Language, WelcomeScreen } from './WelcomeScreen'
 
 export function MainApplication() {
   const transcriptionService = useTranscription()
-  const translationService = useTranslation()
+  const { speakerToOtherPartyService, otherPartyToSpeakerService } =
+    useTranslation()
   const systemTranscriptionService = useSystemTranscription()
-  const systemTranslationService = useSystemTranslation()
   const { publishTranscription } = useTranscriptionEvents()
   const { setIncludeSystemAudioInAnalysis, includeSystemAudioInAnalysis } =
     useSystemAudioAnalysis()
@@ -204,7 +203,14 @@ export function MainApplication() {
       // Initialize services
       await Promise.all([
         transcriptionService.initialize(selectedSpeakerLanguage),
-        translationService.initialize(selectedOtherPartyLanguage),
+        speakerToOtherPartyService.initialize(
+          selectedSpeakerLanguage,
+          selectedOtherPartyLanguage
+        ),
+        otherPartyToSpeakerService.initialize(
+          selectedOtherPartyLanguage,
+          selectedSpeakerLanguage
+        ),
       ])
 
       // Set up VAD callbacks
@@ -237,7 +243,6 @@ export function MainApplication() {
       // Initialize system services
       await Promise.all([
         systemTranscriptionService.initialize(otherPartyLanguage),
-        systemTranslationService.initialize(otherPartyLanguage),
       ])
 
       // Set up system audio callbacks
@@ -301,16 +306,16 @@ export function MainApplication() {
       const currentVad = vad
       const currentSystemAudio = systemAudio
       const currentTranscriptionService = transcriptionService
-      const currentTranslationService = translationService
+      const currentSpeakerToOtherPartyService = speakerToOtherPartyService
+      const currentOtherPartyToSpeakerService = otherPartyToSpeakerService
       const currentSystemTranscriptionService = systemTranscriptionService
-      const currentSystemTranslationService = systemTranslationService
 
       currentVad.pause()
       currentSystemAudio.stop()
       currentTranscriptionService.destroy()
-      currentTranslationService.destroy()
+      currentSpeakerToOtherPartyService.destroy()
+      currentOtherPartyToSpeakerService.destroy()
       currentSystemTranscriptionService.destroy()
-      currentSystemTranslationService.destroy()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run on mount/unmount

@@ -16,7 +16,7 @@ export function BulletPoint({
   speakerLanguage,
   otherPartyLanguage,
 }: BulletPointProps) {
-  const translationService = useTranslation()
+  const { speakerToOtherPartyService } = useTranslation()
   const { updateBulletPointTranslation } = useSubject()
   const [textJa, setTextJa] = useState<string>('')
   const [isTranslating, setIsTranslating] = useState(false)
@@ -30,7 +30,8 @@ export function BulletPoint({
 
   useEffect(() => {
     const translateText = async () => {
-      if (!bulletPoint.text || !translationService || !needsTranslation) return
+      if (!bulletPoint.text || !speakerToOtherPartyService || !needsTranslation)
+        return
 
       // Check if we already have a translation for this bullet point
       if (bulletPoint.translation) {
@@ -45,7 +46,7 @@ export function BulletPoint({
 
       try {
         const stream =
-          await translationService.translateToTargetLanguageStreaming(
+          await speakerToOtherPartyService.translateToTargetLanguageStreaming(
             bulletPoint.text
           )
         const reader = stream.getReader()
@@ -90,7 +91,7 @@ export function BulletPoint({
     bulletPoint.text,
     bulletPoint.id,
     bulletPoint.translation,
-    translationService,
+    speakerToOtherPartyService,
     needsTranslation,
     updateBulletPointTranslation,
   ])

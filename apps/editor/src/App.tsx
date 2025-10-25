@@ -5,7 +5,6 @@ import { SubjectProvider } from './contexts/SubjectContext'
 import { SystemAudioAnalysisProvider } from './contexts/SystemAudioAnalysisContext'
 import { SystemAudioProvider } from './contexts/SystemAudioContext'
 import { SystemTranscriptionProvider } from './contexts/SystemTranscriptionContext'
-import { SystemTranslationProvider } from './contexts/SystemTranslationContext'
 import { TranscriptionProvider } from './contexts/TranscriptionContext'
 import { TranscriptionEventsProvider } from './contexts/TranscriptionEventsContext'
 import { TranslationProvider } from './contexts/TranslationContext'
@@ -21,15 +20,13 @@ function App() {
               <TranscriptionProvider>
                 <SystemTranscriptionProvider>
                   <TranslationProvider>
-                    <SystemTranslationProvider>
-                      <TranscriptionEventsProvider>
-                        <SystemAudioAnalysisProvider>
-                          <SubjectProvider>
-                            <MainApplication />
-                          </SubjectProvider>
-                        </SystemAudioAnalysisProvider>
-                      </TranscriptionEventsProvider>
-                    </SystemTranslationProvider>
+                    <TranscriptionEventsProvider>
+                      <SystemAudioAnalysisProvider>
+                        <SubjectProvider>
+                          <MainApplication />
+                        </SubjectProvider>
+                      </SystemAudioAnalysisProvider>
+                    </TranscriptionEventsProvider>
                   </TranslationProvider>
                 </SystemTranscriptionProvider>
               </TranscriptionProvider>

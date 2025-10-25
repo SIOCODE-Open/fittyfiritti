@@ -1,7 +1,6 @@
 import { Icon } from '@iconify/react'
 import { useEffect, useRef, useState } from 'react'
 import { useSystemTranscription } from '../contexts/SystemTranscriptionContext'
-import { useSystemTranslation } from '../contexts/SystemTranslationContext'
 import { useTranscription } from '../contexts/TranscriptionContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { UnifiedCard } from './UnifiedTranscriptionStream'
@@ -23,6 +22,8 @@ interface UnifiedCardItemProps {
 export function UnifiedCardItem({
   card,
   shouldShowTranslations,
+  speakerLanguage,
+  otherPartyLanguage,
   onTranscriptionComplete,
   onTranslationComplete,
 }: UnifiedCardItemProps) {
@@ -36,9 +37,9 @@ export function UnifiedCardItem({
   const isTranslatingRef = useRef(false)
 
   const transcriptionService = useTranscription()
-  const translationService = useTranslation()
+  const { speakerToOtherPartyService, otherPartyToSpeakerService } =
+    useTranslation()
   const systemTranscriptionService = useSystemTranscription()
-  const systemTranslationService = useSystemTranslation()
 
   // Transcription effect
   useEffect(() => {
@@ -116,53 +117,42 @@ export function UnifiedCardItem({
       setIsTranslating(true)
 
       try {
-        if (card.type === 'microphone') {
-          console.log('📝 Using streaming translation (mic -> target)')
-          const stream =
-            await translationService.translateToTargetLanguageStreaming(
-              originalText
-            )
-          const reader = stream.getReader()
-          let accumulated = ''
+        // Select the correct pre-initialized translation service based on card type
+        const translationService =
+          card.type === 'microphone'
+            ? speakerToOtherPartyService // Microphone: speaker language -> other party language
+            : otherPartyToSpeakerService // System audio: other party language -> speaker language
 
-          while (true) {
-            const { done, value } = await reader.read()
+        const direction =
+          card.type === 'microphone'
+            ? `${speakerLanguage} -> ${otherPartyLanguage}`
+            : `${otherPartyLanguage} -> ${speakerLanguage}`
 
-            if (done) break
+        console.log(
+          `📝 Using pre-initialized translation service (${direction})`
+        )
 
-            accumulated += value
-            setTranslatedText(accumulated)
-          }
+        // Use streaming translation (no need to re-initialize)
+        const stream =
+          await translationService.translateToTargetLanguageStreaming(
+            originalText
+          )
+        const reader = stream.getReader()
+        let accumulated = ''
 
-          setIsTranslating(false)
-          isTranslatingRef.current = false
-          if (onTranslationComplete) {
-            onTranslationComplete(card.id, accumulated)
-          }
-        } else {
-          // System audio
-          console.log('📝 Using streaming translation (system -> english)')
-          const stream =
-            await systemTranslationService.translateToEnglishStreaming(
-              originalText
-            )
-          const reader = stream.getReader()
-          let accumulated = ''
+        while (true) {
+          const { done, value } = await reader.read()
 
-          while (true) {
-            const { done, value } = await reader.read()
+          if (done) break
 
-            if (done) break
+          accumulated += value
+          setTranslatedText(accumulated)
+        }
 
-            accumulated += value
-            setTranslatedText(accumulated)
-          }
-
-          setIsTranslating(false)
-          isTranslatingRef.current = false
-          if (onTranslationComplete) {
-            onTranslationComplete(card.id, accumulated)
-          }
+        setIsTranslating(false)
+        isTranslatingRef.current = false
+        if (onTranslationComplete) {
+          onTranslationComplete(card.id, accumulated)
         }
       } catch (error) {
         console.error('❌ Translation failed for card:', card.id, error)

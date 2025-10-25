@@ -26,7 +26,7 @@ export const SubjectCard = ({
   speakerLanguage,
   otherPartyLanguage,
 }: SubjectCardProps) => {
-  const translationService = useTranslation()
+  const { speakerToOtherPartyService } = useTranslation()
   const { updateSubjectTranslation, subjectHistory, currentHistoryIndex } =
     useSubject()
   const [titleJa, setTitleJa] = useState<string>('')
@@ -41,7 +41,8 @@ export const SubjectCard = ({
 
   useEffect(() => {
     const translateTitle = async () => {
-      if (!subject.title || !translationService || !needsTranslation) return
+      if (!subject.title || !speakerToOtherPartyService || !needsTranslation)
+        return
 
       // Check if we already have a translation in the history
       const currentHistory = subjectHistory[currentHistoryIndex]
@@ -57,7 +58,7 @@ export const SubjectCard = ({
 
       try {
         const stream =
-          await translationService.translateToTargetLanguageStreaming(
+          await speakerToOtherPartyService.translateToTargetLanguageStreaming(
             subject.title
           )
         const reader = stream.getReader()
@@ -97,7 +98,7 @@ export const SubjectCard = ({
     }
   }, [
     subject.title,
-    translationService,
+    speakerToOtherPartyService,
     needsTranslation,
     updateSubjectTranslation,
     subjectHistory,
