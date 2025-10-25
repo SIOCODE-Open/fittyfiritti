@@ -18,39 +18,27 @@ export function useSubjectTranslation(title: string) {
     setState(prev => ({ ...prev, isTranslating: true, titleJa: '' }))
 
     try {
-      // Check if streaming is available, otherwise fall back to regular translation
-      if (translationService.translateToTargetLanguageStreaming) {
-        const stream =
-          await translationService.translateToTargetLanguageStreaming(title)
-        const reader = stream.getReader()
-        let accumulatedText = ''
+      const stream =
+        await translationService.translateToTargetLanguageStreaming(title)
+      const reader = stream.getReader()
+      let accumulatedText = ''
 
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
 
-            accumulatedText += value
+          accumulatedText += value
 
-            // Update UI with streaming text
-            setState(prev => ({ ...prev, titleJa: accumulatedText }))
-          }
-
-          // Mark translation as complete
-          setState(prev => ({ ...prev, isTranslating: false }))
-        } catch (streamError) {
-          console.error('Streaming subject translation failed:', streamError)
-          setState(prev => ({ ...prev, isTranslating: false }))
+          // Update UI with streaming text
+          setState(prev => ({ ...prev, titleJa: accumulatedText }))
         }
-      } else {
-        // Fallback to regular translation
-        const translation =
-          await translationService.translateToTargetLanguage(title)
 
-        setState({
-          titleJa: translation,
-          isTranslating: false,
-        })
+        // Mark translation as complete
+        setState(prev => ({ ...prev, isTranslating: false }))
+      } catch (streamError) {
+        console.error('Streaming subject translation failed:', streamError)
+        setState(prev => ({ ...prev, isTranslating: false }))
       }
     } catch (error) {
       console.error('Failed to translate subject title:', error)

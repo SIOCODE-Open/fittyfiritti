@@ -1,12 +1,10 @@
 import type { LanguageModelSession } from '@diai/built-in-ai-api'
 import {
   createMultiModalSession,
-  transcribeAudio,
   transcribeAudioStreaming,
 } from '@diai/built-in-ai-api'
 
 export interface SystemTranscriptionService {
-  transcribe(audioBlob: Blob): Promise<string>
   transcribeStreaming(audioBlob: Blob): Promise<ReadableStream<string>>
   initialize(language: 'english' | 'spanish' | 'japanese'): Promise<void>
   destroy(): void
@@ -99,36 +97,6 @@ Your task:
       )
     } catch (error) {
       console.error('Failed to initialize system transcription service:', error)
-      throw error
-    }
-  }
-
-  async transcribe(audioBlob: Blob): Promise<string> {
-    if (!this.session) {
-      throw new Error('System transcription service not initialized')
-    }
-
-    try {
-      console.log(
-        `🗾 Transcribing system audio (expecting ${this.targetLanguage})...`
-      )
-
-      const transcription = await transcribeAudio(
-        this.session,
-        audioBlob,
-        this.abortController?.signal
-      )
-
-      // Clean up the transcription
-      const cleanedTranscription = transcription.trim()
-
-      if (cleanedTranscription) {
-        console.log(`🗾 System transcription result: "${cleanedTranscription}"`)
-      }
-
-      return cleanedTranscription
-    } catch (error) {
-      console.error('System transcription failed:', error)
       throw error
     }
   }

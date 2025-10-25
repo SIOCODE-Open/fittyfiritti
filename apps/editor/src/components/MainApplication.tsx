@@ -347,7 +347,10 @@ export function MainApplication() {
 
             <div className="flex-1">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
-                <SubjectDisplay />
+                <SubjectDisplay
+                  speakerLanguage={speakerLanguage}
+                  otherPartyLanguage={otherPartyLanguage}
+                />
               </div>
             </div>
           </div>

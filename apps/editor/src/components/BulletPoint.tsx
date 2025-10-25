@@ -1,53 +1,55 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from '../contexts/TranslationContext'
+import { shouldTranslate } from '../utils/languageUtils'
 import type { BulletPointItem } from './SubjectCard'
+import type { Language } from './WelcomeScreen'
 
 interface BulletPointProps {
   bulletPoint: BulletPointItem
+  speakerLanguage: Language
+  otherPartyLanguage: Language
 }
 
-export function BulletPoint({ bulletPoint }: BulletPointProps) {
+export function BulletPoint({
+  bulletPoint,
+  speakerLanguage,
+  otherPartyLanguage,
+}: BulletPointProps) {
   const translationService = useTranslation()
   const [textJa, setTextJa] = useState<string>('')
   const [isTranslating, setIsTranslating] = useState(false)
+  const needsTranslation = shouldTranslate(speakerLanguage, otherPartyLanguage)
 
   useEffect(() => {
     const translateText = async () => {
-      if (!bulletPoint.text || !translationService) return
+      if (!bulletPoint.text || !translationService || !needsTranslation) return
 
       setIsTranslating(true)
       setTextJa('')
 
       try {
-        if (translationService.translateToTargetLanguageStreaming) {
-          const stream =
-            await translationService.translateToTargetLanguageStreaming(
-              bulletPoint.text
-            )
-          const reader = stream.getReader()
-          let accumulatedText = ''
+        const stream =
+          await translationService.translateToTargetLanguageStreaming(
+            bulletPoint.text
+          )
+        const reader = stream.getReader()
+        let accumulatedText = ''
 
-          try {
-            while (true) {
-              const { done, value } = await reader.read()
-              if (done) break
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
 
-              accumulatedText += value
-              setTextJa(accumulatedText)
-            }
-
-            setIsTranslating(false)
-          } catch (streamError) {
-            console.error(
-              'Streaming bullet point translation failed:',
-              streamError
-            )
-            setIsTranslating(false)
+            accumulatedText += value
+            setTextJa(accumulatedText)
           }
-        } else {
-          const translation =
-            await translationService.translateToTargetLanguage(bulletPoint.text)
-          setTextJa(translation)
+
+          setIsTranslating(false)
+        } catch (streamError) {
+          console.error(
+            'Streaming bullet point translation failed:',
+            streamError
+          )
           setIsTranslating(false)
         }
       } catch (error) {
@@ -63,7 +65,7 @@ export function BulletPoint({ bulletPoint }: BulletPointProps) {
     return () => {
       clearTimeout(debounceTimer)
     }
-  }, [bulletPoint.text, translationService])
+  }, [bulletPoint.text, translationService, needsTranslation])
 
   return (
     <div className="mb-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
@@ -72,13 +74,13 @@ export function BulletPoint({ bulletPoint }: BulletPointProps) {
           <p className="text-gray-800 text-xl leading-relaxed mb-3">
             {bulletPoint.text}
           </p>
-          {isTranslating && (
+          {needsTranslation && isTranslating && (
             <div className="mb-3 flex items-center gap-2 text-sm text-blue-600">
               <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
               <span>Translating...</span>
             </div>
           )}
-          {textJa && (
+          {needsTranslation && textJa && (
             <p className="text-gray-800 text-xl leading-relaxed border-t border-gray-100 pt-3">
               {textJa}
               {isTranslating && (

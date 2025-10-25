@@ -1,7 +1,6 @@
 import type { LanguageModelSession } from '@diai/built-in-ai-api'
 import {
   createMultiModalSession,
-  transcribeAudio,
   transcribeAudioStreaming,
 } from '@diai/built-in-ai-api'
 import { TranscriptionService } from '../types'
@@ -32,32 +31,6 @@ export class TranscriptionServiceImpl implements TranscriptionService {
       console.log('🎯 Transcription service initialized')
     } catch (error) {
       console.error('Failed to initialize transcription service:', error)
-      throw error
-    }
-  }
-
-  async transcribe(audioBlob: Blob): Promise<string> {
-    if (!this.session) {
-      throw new Error('Transcription service not initialized')
-    }
-
-    try {
-      const transcription = await transcribeAudio(
-        this.session,
-        audioBlob,
-        this.abortController?.signal
-      )
-
-      console.log('📝 Transcribed:', transcription.substring(0, 100) + '...')
-      return transcription.trim()
-    } catch (error) {
-      console.error('Transcription failed:', error)
-
-      // If it's an abort error, don't throw
-      if (error instanceof Error && error.name === 'AbortError') {
-        return ''
-      }
-
       throw error
     }
   }

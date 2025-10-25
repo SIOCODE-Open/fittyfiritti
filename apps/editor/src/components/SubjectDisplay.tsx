@@ -7,11 +7,20 @@ import {
 } from '../contexts/TranscriptionEventsContext'
 import { SubjectDetectionService } from '../services/SubjectDetectionService'
 import { SubjectCard, type BulletPointItem } from './SubjectCard'
+import type { Language } from './WelcomeScreen'
 
 // Global job tracker to prevent duplicate subject analysis
 const activeAnalysisJobs = new Set<string>()
 
-export function SubjectDisplay() {
+interface SubjectDisplayProps {
+  speakerLanguage: Language
+  otherPartyLanguage: Language
+}
+
+export function SubjectDisplay({
+  speakerLanguage,
+  otherPartyLanguage,
+}: SubjectDisplayProps) {
   const { currentSubject, changeSubject } = useSubject()
   const { onTranscriptionComplete } = useTranscriptionEvents()
   const [subjectDetectionService] = useState(
@@ -107,7 +116,12 @@ export function SubjectDisplay() {
       <div className="flex-1 overflow-y-auto p-4">
         {/* Current Subject */}
         {currentSubject && (
-          <SubjectCard subject={currentSubject} bulletPoints={bulletPoints} />
+          <SubjectCard
+            subject={currentSubject}
+            bulletPoints={bulletPoints}
+            speakerLanguage={speakerLanguage}
+            otherPartyLanguage={otherPartyLanguage}
+          />
         )}
 
         {isAnalyzing && (

@@ -18,42 +18,27 @@ export function useBulletPointTranslation(text: string) {
     setState(prev => ({ ...prev, isTranslating: true, textJa: '' }))
 
     try {
-      // Check if streaming is available, otherwise fall back to regular translation
-      if (translationService.translateToTargetLanguageStreaming) {
-        const stream =
-          await translationService.translateToTargetLanguageStreaming(text)
-        const reader = stream.getReader()
-        let accumulatedText = ''
+      const stream =
+        await translationService.translateToTargetLanguageStreaming(text)
+      const reader = stream.getReader()
+      let accumulatedText = ''
 
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
 
-            accumulatedText += value
+          accumulatedText += value
 
-            // Update UI with streaming text
-            setState(prev => ({ ...prev, textJa: accumulatedText }))
-          }
-
-          // Mark translation as complete
-          setState(prev => ({ ...prev, isTranslating: false }))
-        } catch (streamError) {
-          console.error(
-            'Streaming bullet point translation failed:',
-            streamError
-          )
-          setState(prev => ({ ...prev, isTranslating: false }))
+          // Update UI with streaming text
+          setState(prev => ({ ...prev, textJa: accumulatedText }))
         }
-      } else {
-        // Fallback to regular translation
-        const translation =
-          await translationService.translateToTargetLanguage(text)
 
-        setState({
-          textJa: translation,
-          isTranslating: false,
-        })
+        // Mark translation as complete
+        setState(prev => ({ ...prev, isTranslating: false }))
+      } catch (streamError) {
+        console.error('Streaming bullet point translation failed:', streamError)
+        setState(prev => ({ ...prev, isTranslating: false }))
       }
     } catch (error) {
       console.error('Failed to translate bullet point text:', error)

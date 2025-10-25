@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { Subject } from '../contexts/SubjectContext'
 import { useTranslation } from '../contexts/TranslationContext'
+import { shouldTranslate } from '../utils/languageUtils'
 import { BulletPoint } from './BulletPoint'
+import type { Language } from './WelcomeScreen'
 
 export interface BulletPointItem {
   id: string
@@ -12,47 +14,48 @@ export interface BulletPointItem {
 interface SubjectCardProps {
   subject: Subject
   bulletPoints: BulletPointItem[]
+  speakerLanguage: Language
+  otherPartyLanguage: Language
 }
 
-export const SubjectCard = ({ subject, bulletPoints }: SubjectCardProps) => {
+export const SubjectCard = ({
+  subject,
+  bulletPoints,
+  speakerLanguage,
+  otherPartyLanguage,
+}: SubjectCardProps) => {
   const translationService = useTranslation()
   const [titleJa, setTitleJa] = useState<string>('')
   const [isTranslating, setIsTranslating] = useState(false)
+  const needsTranslation = shouldTranslate(speakerLanguage, otherPartyLanguage)
 
   useEffect(() => {
     const translateTitle = async () => {
-      if (!subject.title || !translationService) return
+      if (!subject.title || !translationService || !needsTranslation) return
 
       setIsTranslating(true)
       setTitleJa('')
 
       try {
-        if (translationService.translateToTargetLanguageStreaming) {
-          const stream =
-            await translationService.translateToTargetLanguageStreaming(
-              subject.title
-            )
-          const reader = stream.getReader()
-          let accumulatedText = ''
+        const stream =
+          await translationService.translateToTargetLanguageStreaming(
+            subject.title
+          )
+        const reader = stream.getReader()
+        let accumulatedText = ''
 
-          try {
-            while (true) {
-              const { done, value } = await reader.read()
-              if (done) break
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
 
-              accumulatedText += value
-              setTitleJa(accumulatedText)
-            }
-
-            setIsTranslating(false)
-          } catch (streamError) {
-            console.error('Streaming subject translation failed:', streamError)
-            setIsTranslating(false)
+            accumulatedText += value
+            setTitleJa(accumulatedText)
           }
-        } else {
-          const translation =
-            await translationService.translateToTargetLanguage(subject.title)
-          setTitleJa(translation)
+
+          setIsTranslating(false)
+        } catch (streamError) {
+          console.error('Streaming subject translation failed:', streamError)
           setIsTranslating(false)
         }
       } catch (error) {
@@ -68,7 +71,7 @@ export const SubjectCard = ({ subject, bulletPoints }: SubjectCardProps) => {
     return () => {
       clearTimeout(debounceTimer)
     }
-  }, [subject.title, translationService])
+  }, [subject.title, translationService, needsTranslation])
 
   return (
     <div className="mb-6">
@@ -76,7 +79,7 @@ export const SubjectCard = ({ subject, bulletPoints }: SubjectCardProps) => {
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-4">
           <h2 className="text-3xl font-bold text-gray-800">{subject.title}</h2>
-          {isTranslating && (
+          {needsTranslation && isTranslating && (
             <div className="flex items-center gap-1 text-xs text-blue-600">
               <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
               <span>Translating...</span>
@@ -84,7 +87,7 @@ export const SubjectCard = ({ subject, bulletPoints }: SubjectCardProps) => {
           )}
         </div>
 
-        {titleJa && (
+        {needsTranslation && titleJa && (
           <h3 className="text-3xl text-gray-800 mb-4">
             {titleJa}
             {isTranslating && (
@@ -102,7 +105,12 @@ export const SubjectCard = ({ subject, bulletPoints }: SubjectCardProps) => {
           </div>
         )}
         {bulletPoints.map(bulletPoint => (
-          <BulletPoint key={bulletPoint.id} bulletPoint={bulletPoint} />
+          <BulletPoint
+            key={bulletPoint.id}
+            bulletPoint={bulletPoint}
+            speakerLanguage={speakerLanguage}
+            otherPartyLanguage={otherPartyLanguage}
+          />
         ))}
       </div>
     </div>

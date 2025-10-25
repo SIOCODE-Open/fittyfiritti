@@ -40,44 +40,15 @@ export interface AudioCaptureService {
 }
 
 export interface TranscriptionService {
-  transcribe(audioBlob: Blob): Promise<string>
   transcribeStreaming(audioBlob: Blob): Promise<ReadableStream<string>>
   initialize(): Promise<void>
   destroy(): void
 }
 
 export interface TranslationService {
-  translateToTargetLanguage(text: string): Promise<string>
   translateToTargetLanguageStreaming(
     text: string
   ): Promise<ReadableStream<string>>
   initialize(targetLanguage?: 'english' | 'spanish' | 'japanese'): Promise<void>
-  destroy(): void
-}
-
-// Multi-language translation types
-export interface LanguagePair {
-  source: string
-  target: string
-  name: string
-}
-
-export interface TranslationRequest {
-  text: string
-  sourceLanguage: string
-  targetLanguage: string
-}
-
-export interface MultiLanguageTranslationService {
-  translate(request: TranslationRequest): Promise<string>
-  translateStreaming(
-    request: TranslationRequest
-  ): Promise<ReadableStream<string>>
-  getAvailableLanguagePairs(): Promise<LanguagePair[]>
-  isLanguagePairSupported(
-    sourceLanguage: string,
-    targetLanguage: string
-  ): Promise<boolean>
-  initialize(): Promise<void>
   destroy(): void
 }
