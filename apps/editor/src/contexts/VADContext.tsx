@@ -69,14 +69,11 @@ export function VADProvider({ children }: VADProviderProps) {
     const initializeVAD = async () => {
       try {
         setLoading(true)
-        console.log('🎧 Waiting for VAD to load from CDN...')
 
         // Wait for VAD to be available from CDN
         await waitForVAD()
 
         if (!isMounted) return
-
-        console.log('🎧 VAD loaded, creating instance...')
 
         // Create VAD instance using the global VAD object
         const vad = await window.VAD.MicVAD.new({
@@ -95,42 +92,23 @@ export function VADProvider({ children }: VADProviderProps) {
           minSpeechMs: 400, // Minimum 400ms of speech to trigger onSpeechEnd
           // Callbacks
           onSpeechStart: () => {
-            console.log('🗣️ VAD Speech started')
             setUserSpeaking(true)
             if (speechStartCallbackRef.current) {
               speechStartCallbackRef.current()
             }
           },
           onSpeechEnd: (audio: Float32Array) => {
-            console.log('🗣️ VAD Speech ended, audio length:', audio.length)
             setUserSpeaking(false)
             if (speechEndCallbackRef.current) {
               speechEndCallbackRef.current(audio)
             }
           },
           onVADMisfire: () => {
-            console.log('⚠️ VAD misfire (speech too short)')
             setUserSpeaking(false)
           },
-          onFrameProcessed: (probabilities: VAD.SpeechProbabilities) => {
-            // Add debug logging to see if frames are being processed
-            if (probabilities.isSpeech > 0.2) {
-              console.log(
-                '🔊 VAD Frame processed - speech probability:',
-                probabilities.isSpeech.toFixed(3)
-              )
-            }
-          },
           onSpeechRealStart: () => {
-            console.log('🗣️ VAD Speech real start (passed minimum duration)')
+            // Speech passed minimum duration threshold
           },
-        })
-
-        console.log('🎧 VAD instance created, checking properties...')
-        console.log('VAD instance:', {
-          listening: (vad as VAD.MicVADInstance).listening,
-          loading: (vad as VAD.MicVADInstance).loading,
-          errored: (vad as VAD.MicVADInstance).errored,
         })
 
         if (!isMounted) {
@@ -167,17 +145,11 @@ export function VADProvider({ children }: VADProviderProps) {
     if (!vadInstance || isListening) return
 
     try {
-      console.log('🎤 Starting VAD listening...')
-
       // First check if we have microphone permission
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         })
-        console.log(
-          '🎤 Microphone access granted, stream tracks:',
-          stream.getTracks().length
-        )
         // Stop the test stream
         stream.getTracks().forEach(track => track.stop())
       } catch (permError) {
@@ -204,7 +176,6 @@ export function VADProvider({ children }: VADProviderProps) {
       vadInstance.pause()
       setIsListening(false)
       setUserSpeaking(false)
-      console.log('⏸️ VAD listening paused')
     } catch (error) {
       console.error('Failed to pause VAD:', error)
     }

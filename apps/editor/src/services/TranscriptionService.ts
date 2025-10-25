@@ -8,13 +8,11 @@ import { TranscriptionService } from '../types'
 export class TranscriptionServiceImpl implements TranscriptionService {
   private session?: LanguageModelSession
   private abortController?: AbortController
-  private targetLanguage: 'english' | 'spanish' | 'japanese' = 'english'
 
   async initialize(
     language: 'english' | 'spanish' | 'japanese'
   ): Promise<void> {
     try {
-      this.targetLanguage = language
       this.abortController = new AbortController()
 
       // Language configuration mirrored from previous system transcription setup
@@ -94,9 +92,6 @@ Your task:
     }
 
     try {
-      console.log(
-        `📝 Starting streaming transcription (expecting ${this.targetLanguage})...`
-      )
       return await transcribeAudioStreaming(
         this.session,
         audioBlob,
@@ -128,7 +123,5 @@ Your task:
       this.session.destroy()
       this.session = undefined
     }
-
-    console.log('🔄 Transcription service destroyed')
   }
 }

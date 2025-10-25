@@ -52,8 +52,6 @@ export function MainApplication() {
   // Callback to handle completed transcriptions for subject detection
   const handleTranscriptionComplete = useCallback(
     (cardId: string, text: string, timestamp: number) => {
-      console.log('Transcription complete for card:', cardId, 'Text:', text)
-
       // Determine if this is a system card by checking if it exists in systemTranscriptionCards
       const isSystemCard = systemTranscriptionCards.some(
         card => card.id === cardId
@@ -79,13 +77,8 @@ export function MainApplication() {
 
   // Callback to handle completed translations (optional, for logging or other purposes)
   const handleTranslationComplete = useCallback(
-    (cardId: string, translatedText: string) => {
-      console.log(
-        'Translation complete for card:',
-        cardId,
-        'Translation:',
-        translatedText
-      )
+    (_cardId: string, _translatedText: string) => {
+      // Translation completed
     },
     []
   )
@@ -164,8 +157,6 @@ export function MainApplication() {
   const handleSystemAudioSegment = useCallback(
     async (audioChunk: AudioChunk) => {
       try {
-        console.log('🖥️ Processing system audio segment')
-
         // Process the audio chunk - it will create a card internally
         await handleSystemAudioChunk(audioChunk)
       } catch (error) {
@@ -177,8 +168,7 @@ export function MainApplication() {
   )
 
   const handleSpeechStart = useCallback(() => {
-    console.log('🗣️ Speech started')
-    // Could add visual feedback here
+    // Speech started
   }, [])
 
   // Start recording with VAD

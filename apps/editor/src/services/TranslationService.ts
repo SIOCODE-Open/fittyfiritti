@@ -1,4 +1,3 @@
-import type { Translator } from '@diai/built-in-ai-api'
 import {
   checkTranslatorAvailability,
   translateTextStreaming,
@@ -6,7 +5,6 @@ import {
 import { TranslationService } from '../types'
 
 export class TranslationServiceImpl implements TranslationService {
-  private translator?: Translator
   private abortController?: AbortController
   private isInitialized = false
   private sourceLanguage: 'english' | 'spanish' | 'japanese' = 'english'
@@ -34,21 +32,20 @@ export class TranslationServiceImpl implements TranslationService {
 
       // Check if Translation API is available
       const isAvailable = await checkTranslatorAvailability()
-      if (isAvailable) {
-        console.log(
-          `🌐 Translation service initialized with Translator API (${sourceConfig.name} to ${targetConfig.name})`
-        )
-      } else {
-        console.log(
-          `🌐 Translation service initialized with fallback mode (Prompt API, ${sourceConfig.name} to ${targetConfig.name})`
+      if (!isAvailable) {
+        throw new Error(
+          'Translation API is not available. Please ensure Chrome has translation support enabled.'
         )
       }
+
+      console.log(
+        `🌐 Translation service initialized (${sourceConfig.name} → ${targetConfig.name})`
+      )
 
       this.isInitialized = true
     } catch (error) {
       console.error('Failed to initialize translation service:', error)
-      // Don't throw error - fallback will be used automatically
-      this.isInitialized = true
+      throw error
     }
   }
 
@@ -70,9 +67,6 @@ export class TranslationServiceImpl implements TranslationService {
     // Check if translation is needed (source and target languages are different)
     const needsTranslation = this.sourceLanguage !== this.targetLanguage
     if (!needsTranslation) {
-      console.log(
-        '📝 Source and target languages are the same, returning as-is'
-      )
       return new ReadableStream({
         start(controller) {
           controller.enqueue(text)
@@ -95,10 +89,6 @@ export class TranslationServiceImpl implements TranslationService {
         languageConfig[this.sourceLanguage], // From source language
         languageConfig[this.targetLanguage], // To target language
         this.abortController?.signal
-      )
-
-      console.log(
-        `🌐 Streaming translation started (${this.sourceLanguage.toUpperCase()}→${this.targetLanguage.toUpperCase()}): "${text.substring(0, 30)}..."`
       )
 
       return stream
@@ -127,13 +117,6 @@ export class TranslationServiceImpl implements TranslationService {
       this.abortController = undefined
     }
 
-    if (this.translator) {
-      this.translator.destroy()
-      this.translator = undefined
-    }
-
     this.isInitialized = false
-
-    console.log('🔄 Translation service destroyed')
   }
 }

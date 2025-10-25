@@ -43,8 +43,6 @@ export function SystemAudioProvider({ children }: SystemAudioProviderProps) {
   // Handle VAD speech detection
   const handleSystemSpeechEnd = useCallback(async (audioData: Float32Array) => {
     try {
-      console.log('🖥️ System VAD speech ended, audio length:', audioData.length)
-
       // Convert VAD audio to blob
       const audioBlob = convertAudioToBlob(audioData)
 
@@ -67,12 +65,10 @@ export function SystemAudioProvider({ children }: SystemAudioProviderProps) {
   }, [])
 
   const handleSystemSpeechStart = useCallback(() => {
-    console.log('🖥️ System VAD speech started')
     setSystemSpeaking(true)
   }, [])
 
   const handleSystemSpeechEndCallback = useCallback(() => {
-    console.log('🖥️ System VAD speech ended callback')
     setSystemSpeaking(false)
   }, [])
 
@@ -82,10 +78,6 @@ export function SystemAudioProvider({ children }: SystemAudioProviderProps) {
       if (!window.VAD || !window.VAD.MicVAD) {
         throw new Error('VAD library not available')
       }
-
-      console.log(
-        '🖥️ Initializing System VAD with custom system audio stream...'
-      )
 
       // Create VAD instance using custom stream from system audio
       const vad = await window.VAD.MicVAD.new({
@@ -101,7 +93,6 @@ export function SystemAudioProvider({ children }: SystemAudioProviderProps) {
           if (!displayStreamRef.current) {
             throw new Error('System audio stream not available')
           }
-          console.log('🖥️ Providing system audio stream to VAD')
           return displayStreamRef.current
         },
         // Critical timing and sensitivity parameters
@@ -112,31 +103,17 @@ export function SystemAudioProvider({ children }: SystemAudioProviderProps) {
         minSpeechMs: 400, // Minimum 400ms of speech to trigger onSpeechEnd
         // Callbacks
         onSpeechStart: () => {
-          console.log('🖥️ System VAD Speech started')
           handleSystemSpeechStart()
         },
         onSpeechEnd: (audio: Float32Array) => {
-          console.log('🖥️ System VAD Speech ended, audio length:', audio.length)
           handleSystemSpeechEndCallback()
           handleSystemSpeechEnd(audio)
         },
         onVADMisfire: () => {
-          console.log('⚠️ System VAD misfire (speech too short)')
           setSystemSpeaking(false)
         },
-        onFrameProcessed: (probabilities: VAD.SpeechProbabilities) => {
-          // Add debug logging to see if frames are being processed
-          if (probabilities.isSpeech > 0.2) {
-            console.log(
-              '🔊 System VAD Frame processed - speech probability:',
-              probabilities.isSpeech.toFixed(3)
-            )
-          }
-        },
         onSpeechRealStart: () => {
-          console.log(
-            '🖥️ System VAD Speech real start (passed minimum duration)'
-          )
+          // Speech passed minimum duration threshold
         },
       })
 
@@ -160,7 +137,6 @@ export function SystemAudioProvider({ children }: SystemAudioProviderProps) {
     try {
       setLoading(true)
       setErrored(false)
-      console.log('🖥️ Starting system audio capture with VAD...')
 
       // First: Request screen sharing with system audio
       const displayStream = await navigator.mediaDevices.getDisplayMedia({
@@ -180,13 +156,10 @@ export function SystemAudioProvider({ children }: SystemAudioProviderProps) {
         )
       }
 
-      console.log('🖥️ Screen sharing with audio tracks:', audioTracks.length)
-
       // Handle stream ending (user stops screen sharing)
       const videoTracks = displayStream.getVideoTracks()
       if (videoTracks.length > 0) {
         videoTracks[0]!.onended = () => {
-          console.log('🖥️ Screen sharing ended by user')
           // Call stop directly here instead of the function reference
           // to avoid circular dependency
           if (vadInstanceRef.current) {
@@ -231,8 +204,6 @@ export function SystemAudioProvider({ children }: SystemAudioProviderProps) {
     if (!isCapturing) return
 
     try {
-      console.log('🛑 Stopping system audio capture...')
-
       // Stop VAD
       if (vadInstanceRef.current) {
         vadInstanceRef.current.pause()
@@ -248,8 +219,6 @@ export function SystemAudioProvider({ children }: SystemAudioProviderProps) {
 
       setIsCapturing(false)
       setSystemSpeaking(false)
-
-      console.log('✅ System audio capture stopped')
     } catch (error) {
       console.error('Failed to stop system audio capture:', error)
       setErrored('Failed to stop screen sharing')

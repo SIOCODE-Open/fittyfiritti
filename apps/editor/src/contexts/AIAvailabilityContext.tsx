@@ -46,8 +46,6 @@ export function AIAvailabilityProvider({
 
   const preloadVAD = useCallback(async () => {
     try {
-      console.log('Checking VAD availability...')
-
       // Wait for VAD to be available from CDN but don't create an instance
       const waitForVAD = () => {
         return new Promise<void>((resolve, reject) => {
@@ -80,8 +78,6 @@ export function AIAvailabilityProvider({
 
   const testModelCreation = useCallback(async () => {
     try {
-      console.log('Testing AI model creation...')
-
       // Create a test session to ensure AI is working
       const session = await createLanguageModelSession({
         temperature: 0.5,
@@ -179,7 +175,6 @@ export function AIAvailabilityProvider({
       const session = await createLanguageModelSession({
         monitor: monitor => {
           monitor.addEventListener('downloadprogress', event => {
-            console.log('Download progress:', event.loaded * 100, '%')
             setDownloadProgress(event.loaded)
           })
         },

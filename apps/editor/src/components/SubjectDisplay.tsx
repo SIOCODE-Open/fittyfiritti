@@ -75,7 +75,6 @@ export function SubjectDisplay({
 
       // Check if this analysis is already in progress
       if (activeAnalysisJobs.has(jobKey)) {
-        console.log('⏭️ Skipping duplicate subject analysis job:', jobKey)
         return
       }
 
@@ -99,7 +98,6 @@ export function SubjectDisplay({
           return
         } else if (result.action.action === 'noOperation') {
           // Do nothing - just ignore this transcription
-          console.log('⏭️ No operation - ignoring transcription')
           return
         }
 

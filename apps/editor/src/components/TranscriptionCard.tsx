@@ -3,13 +3,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranscription } from '../contexts/TranscriptionContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { TranscriptionCardData } from './TranscriptionStream'
-import { Language } from './WelcomeScreen'
 
 interface TranscriptionCardProps {
   card: TranscriptionCardData
   shouldShowTranslations: boolean
-  speakerLanguage: Language
-  otherPartyLanguage: Language
   onTranscriptionComplete?: (
     cardId: string,
     text: string,
@@ -21,8 +18,6 @@ interface TranscriptionCardProps {
 export function TranscriptionCard({
   card,
   shouldShowTranslations,
-  speakerLanguage,
-  otherPartyLanguage,
   onTranscriptionComplete,
   onTranslationComplete,
 }: TranscriptionCardProps) {
@@ -42,17 +37,14 @@ export function TranscriptionCard({
   // Transcription effect
   useEffect(() => {
     if (isTranscribingRef.current) {
-      console.log('⚠️ Transcription already in progress for card:', card.id)
       return
     }
 
     async function runTranscription() {
-      console.log('🎬 Starting transcription for card:', card.id)
       isTranscribingRef.current = true
       setIsTranscribing(true)
 
       try {
-        console.log('📝 Using streaming transcription for card:', card.id)
         const stream = await transcriptionService.transcribeStreaming(
           card.audioSegment
         )
@@ -63,11 +55,9 @@ export function TranscriptionCard({
           const { done, value } = await reader.read()
 
           if (done) {
-            console.log('✅ Stream completed')
             break
           }
 
-          console.log('📝 Received chunk:', value)
           accumulated += value
           setOriginalText(accumulated)
         }
@@ -75,7 +65,6 @@ export function TranscriptionCard({
         setIsTranscribing(false)
         setTranscriptionComplete(true)
         isTranscribingRef.current = false
-        console.log('✅ Transcription complete:', accumulated)
 
         if (onTranscriptionComplete && accumulated.trim()) {
           onTranscriptionComplete(card.id, accumulated, card.timestamp)
@@ -102,12 +91,10 @@ export function TranscriptionCard({
     }
 
     if (isTranslatingRef.current) {
-      console.log('⚠️ Translation already in progress for card:', card.id)
       return
     }
 
     async function runTranslation() {
-      console.log('🌐 Starting translation for card:', card.id)
       isTranslatingRef.current = true
       setIsTranslating(true)
 
@@ -117,15 +104,6 @@ export function TranscriptionCard({
           card.type === 'microphone'
             ? speakerToOtherPartyService // Microphone: speaker language -> other party language
             : otherPartyToSpeakerService // System audio: other party language -> speaker language
-
-        const direction =
-          card.type === 'microphone'
-            ? `${speakerLanguage} -> ${otherPartyLanguage}`
-            : `${otherPartyLanguage} -> ${speakerLanguage}`
-
-        console.log(
-          `📝 Using pre-initialized translation service (${direction})`
-        )
 
         // Use streaming translation (no need to re-initialize)
         const stream =

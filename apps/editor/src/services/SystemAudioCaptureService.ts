@@ -71,7 +71,6 @@ export class SystemAudioCaptureService implements AudioCaptureService {
       const videoTracks = this.displayStream.getVideoTracks()
       if (videoTracks.length > 0) {
         videoTracks[0]!.onended = () => {
-          console.log('🖥️ Screen sharing ended by user')
           this.stopCapture()
         }
       }
@@ -162,11 +161,8 @@ export class SystemAudioCaptureService implements AudioCaptureService {
 
   completeSegment(): void {
     if (!this.isCapturing || !this.mediaRecorder) {
-      console.log('Cannot complete segment: not capturing or no recorder')
       return
     }
-
-    console.log('Completing system audio segment...')
 
     // Stop current recording to trigger ondataavailable
     if (this.mediaRecorder.state === 'recording') {
@@ -174,8 +170,6 @@ export class SystemAudioCaptureService implements AudioCaptureService {
       const originalOnStop = this.mediaRecorder.onstop
 
       this.mediaRecorder.onstop = () => {
-        console.log('System MediaRecorder stopped, processing chunks...')
-
         if (this.chunks.length > 0) {
           const blob = new Blob(this.chunks, { type: 'audio/webm' })
           const timestamp = Date.now()
@@ -190,7 +184,6 @@ export class SystemAudioCaptureService implements AudioCaptureService {
             waveformData: [...this.waveformData], // Include current waveform
           }
 
-          console.log('Created system audio chunk, calling callback')
           this.onChunkCallback?.(audioChunk)
 
           // Clear chunks for next segment
@@ -206,7 +199,6 @@ export class SystemAudioCaptureService implements AudioCaptureService {
           setTimeout(() => {
             if (this.mediaRecorder && this.isCapturing) {
               this.mediaRecorder.start()
-              console.log('Started new system audio recording for next segment')
             }
           }, 100)
         }

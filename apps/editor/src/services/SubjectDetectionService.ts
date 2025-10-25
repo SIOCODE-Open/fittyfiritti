@@ -223,9 +223,6 @@ Respond only with JSON containing text.`,
 
   setPresentationState(isPaused: boolean): void {
     this.isPresentationPaused = isPaused
-    console.log(
-      `🎤 Presentation state changed to: ${isPaused ? 'PAUSED' : 'RUNNING'}`
-    )
   }
 
   getPresentationState(): boolean {
@@ -245,7 +242,6 @@ Respond only with JSON containing text.`,
     try {
       // If presentation is paused, use the paused session
       if (this.isPresentationPaused) {
-        console.log('🛑 Presentation is PAUSED - checking for resume command')
         const actionResponse = await this.actionSessionPaused!.prompt(
           `Transcription: "${transcription}"`,
           {
@@ -253,7 +249,6 @@ Respond only with JSON containing text.`,
           }
         )
 
-        console.log('🧠 Paused action detection:', actionResponse)
         const actionResult = JSON.parse(actionResponse)
 
         if (actionResult.action === 'resumePresentation') {
@@ -269,12 +264,8 @@ Respond only with JSON containing text.`,
         }
       }
 
-      // If presentation is running, use the running session
-      console.log('▶️ Presentation is RUNNING - analyzing for actions')
-
       // If no subject exists yet, skip action detection and go straight to title generation
       if (!hasSubject) {
-        console.log('🧠 No subject exists - generating initial title')
         const titleResponse = await this.titleSession!.prompt(
           `Create a title for this conversation topic based on the first message: "${transcription}"`,
           {
@@ -282,15 +273,12 @@ Respond only with JSON containing text.`,
           }
         )
 
-        console.log('🧠 Initial title generation:', titleResponse)
         const titleResult = JSON.parse(titleResponse)
 
         const action: SubjectAction = {
           action: 'changeSubject',
           title: titleResult.title?.trim() || 'General Discussion',
         }
-
-        console.log('🧠 Final action:', action)
 
         return {
           action,
@@ -312,7 +300,6 @@ New transcription: "${transcription}"`
         }
       )
 
-      console.log('🧠 Step 1 - Action detection:', actionResponse)
       const actionResult = JSON.parse(actionResponse)
 
       let action: SubjectAction
@@ -336,7 +323,6 @@ New transcription: "${transcription}"`
           }
         )
 
-        console.log('🧠 Step 2a - Title generation:', titleResponse)
         const titleResult = JSON.parse(titleResponse)
 
         if (!titleResult.title || titleResult.title.trim() === '') {
@@ -369,7 +355,6 @@ New transcription: "${transcription}"`
           }
         )
 
-        console.log('🧠 Step 2b - Bullet point generation:', bulletResponse)
         const bulletResult = JSON.parse(bulletResponse)
 
         action = {
@@ -377,8 +362,6 @@ New transcription: "${transcription}"`
           text: bulletResult.text || transcription,
         }
       }
-
-      console.log('🧠 Final action:', action)
 
       return {
         action,
@@ -399,7 +382,6 @@ New transcription: "${transcription}"`
 
   clearHistory(): void {
     this.transcriptionHistory = []
-    console.log('🧹 Subject detection history cleared')
   }
 
   async generateBootstrapTitle(transcription: string): Promise<string> {
@@ -415,7 +397,6 @@ New transcription: "${transcription}"`
         }
       )
 
-      console.log('🧠 Bootstrap title generation:', titleResponse)
       const titleResult = JSON.parse(titleResponse)
 
       if (!titleResult.title || titleResult.title.trim() === '') {
@@ -455,6 +436,5 @@ New transcription: "${transcription}"`
 
     this.transcriptionHistory = []
     this.isInitialized = false
-    console.log('🧠 Subject Detection Service destroyed')
   }
 }

@@ -185,8 +185,6 @@ export function TranscriptionStream({
               key={card.id}
               card={card}
               shouldShowTranslations={shouldShowTranslations}
-              speakerLanguage={speakerLanguage}
-              otherPartyLanguage={otherPartyLanguage}
               onTranscriptionComplete={handleTranscriptionCompleteWrapper}
               onTranslationComplete={handleTranslationCompleteWrapper}
             />
