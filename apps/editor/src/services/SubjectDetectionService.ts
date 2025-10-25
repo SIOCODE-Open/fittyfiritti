@@ -96,7 +96,6 @@ export class SubjectDetectionService {
   private isInitialized = false
   private transcriptionHistory: string[] = []
   private maxHistorySize = 10 // Keep last 10 transcriptions for context
-  private activeJobs = new Map<string, Promise<SubjectDetectionResult>>() // Track ongoing analyses
   private isPresentationPaused = true // Start with presentation paused
 
   async initialize(): Promise<void> {
@@ -219,29 +218,7 @@ Respond only with JSON containing text.`,
       throw new Error('Subject Detection Service not initialized')
     }
 
-    // Create a job key for deduplication
-    const jobKey = transcription.trim()
-
-    // Check if this exact transcription is already being analyzed
-    const existingJob = this.activeJobs.get(jobKey)
-    if (existingJob) {
-      console.log(
-        '🔄 Reusing existing subject analysis job for:',
-        transcription.substring(0, 30) + '...'
-      )
-      return existingJob
-    }
-
-    // Create new analysis promise and track it
-    const analysisPromise = this.performAnalysis(transcription, hasSubject)
-    this.activeJobs.set(jobKey, analysisPromise)
-
-    // Clean up tracking when job completes
-    analysisPromise.finally(() => {
-      this.activeJobs.delete(jobKey)
-    })
-
-    return analysisPromise
+    return this.performAnalysis(transcription, hasSubject)
   }
 
   setPresentationState(isPaused: boolean): void {
@@ -458,9 +435,6 @@ New transcription: "${transcription}"`
   }
 
   destroy(): void {
-    // Clear active jobs
-    this.activeJobs.clear()
-
     // Properly destroy sessions that this service owns
     if (this.actionSessionPaused) {
       this.actionSessionPaused.destroy()

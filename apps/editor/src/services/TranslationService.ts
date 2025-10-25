@@ -5,22 +5,9 @@ import {
 } from '@diai/built-in-ai-api'
 import { TranslationService } from '../types'
 
-interface StreamingTranslationJob {
-  text: string
-  resolve: (stream: ReadableStream<string>) => void
-  reject: (error: Error) => void
-  jobId: string
-}
-
 export class TranslationServiceImpl implements TranslationService {
   private translator?: Translator
   private abortController?: AbortController
-  private streamingQueue: Array<StreamingTranslationJob> = []
-  private isStreamingProcessing = false
-  private activeStreamingJobs = new Map<
-    string,
-    Promise<ReadableStream<string>>
-  >() // Track ongoing streaming jobs
   private isInitialized = false
   private sourceLanguage: 'english' | 'spanish' | 'japanese' = 'english'
   private targetLanguage: 'english' | 'spanish' | 'japanese' = 'japanese'
@@ -94,131 +81,47 @@ export class TranslationServiceImpl implements TranslationService {
       })
     }
 
-    // Check if this exact text is already being translated
-    const existingJob = this.activeStreamingJobs.get(text)
-    if (existingJob) {
-      console.log(
-        '🔄 Reusing existing streaming translation job for:',
-        text.substring(0, 30) + '...'
+    // Language configuration
+    const languageConfig = {
+      english: 'en',
+      spanish: 'es',
+      japanese: 'ja',
+    }
+
+    try {
+      // Call streaming translation API directly
+      const stream = await translateTextStreaming(
+        text,
+        languageConfig[this.sourceLanguage], // From source language
+        languageConfig[this.targetLanguage], // To target language
+        this.abortController?.signal
       )
-      return existingJob
-    }
 
-    // Create a new streaming translation promise and track it
-    const translationPromise = new Promise<ReadableStream<string>>(
-      (resolve, reject) => {
-        const jobId = Math.random().toString(36).substr(2, 9)
+      console.log(
+        `🌐 Streaming translation started (${this.sourceLanguage.toUpperCase()}→${this.targetLanguage.toUpperCase()}): "${text.substring(0, 30)}..."`
+      )
 
-        // Add to queue
-        this.streamingQueue.push({ text, resolve, reject, jobId })
+      return stream
+    } catch (error) {
+      console.error('Streaming translation failed:', error)
 
-        // Process queue if not already processing
-        if (!this.isStreamingProcessing) {
-          this.processStreamingQueue()
-        }
-      }
-    )
-
-    // Track this job
-    this.activeStreamingJobs.set(text, translationPromise)
-
-    // Clean up tracking when job completes
-    translationPromise.finally(() => {
-      this.activeStreamingJobs.delete(text)
-    })
-
-    return translationPromise
-  }
-
-  private async processStreamingQueue(): Promise<void> {
-    if (this.streamingQueue.length === 0 || this.isStreamingProcessing) {
-      return
-    }
-
-    this.isStreamingProcessing = true
-
-    while (this.streamingQueue.length > 0) {
-      const item = this.streamingQueue.shift()
-      if (!item) continue
-
-      try {
-        // Check if we should skip this job (duplicate text already processed)
-        const isDuplicate = this.streamingQueue.some(
-          queuedItem => queuedItem.text === item.text
-        )
-        if (isDuplicate) {
-          console.log(
-            '⏭️ Skipping duplicate streaming translation in queue:',
-            item.text.substring(0, 30) + '...'
-          )
-          item.resolve(
-            new ReadableStream({
-              start(controller) {
-                controller.close()
-              },
-            })
-          )
-          continue
-        }
-
-        // Use the new streaming Translation API function
-        const languageConfig = {
-          english: 'en',
-          spanish: 'es',
-          japanese: 'ja',
-        }
-
-        const stream = await translateTextStreaming(
-          item.text,
-          languageConfig[this.sourceLanguage], // From source language
-          languageConfig[this.targetLanguage], // To target language
-          this.abortController?.signal
-        )
-
-        console.log(
-          `🌐 Streaming translation started (${this.sourceLanguage.toUpperCase()}→${this.targetLanguage.toUpperCase()}): "${item.text.substring(0, 30)}..."`
-        )
-        item.resolve(stream)
-      } catch (error) {
-        console.error('Streaming translation failed:', error)
-
-        // If it's an abort error, resolve with empty stream
-        if (error instanceof Error && error.name === 'AbortError') {
-          item.resolve(
-            new ReadableStream({
-              start(controller) {
-                controller.close()
-              },
-            })
-          )
-        } else {
-          item.reject(
-            error instanceof Error
-              ? error
-              : new Error('Streaming translation failed')
-          )
-        }
+      // If it's an abort error, return empty stream
+      if (error instanceof Error && error.name === 'AbortError') {
+        return new ReadableStream({
+          start(controller) {
+            controller.close()
+          },
+        })
       }
 
-      // Small delay between translations to avoid overwhelming the AI
-      await new Promise(resolve => setTimeout(resolve, 50))
+      // Re-throw other errors
+      throw error instanceof Error
+        ? error
+        : new Error('Streaming translation failed')
     }
-
-    this.isStreamingProcessing = false
   }
 
   destroy(): void {
-    // Reject all pending streaming translations
-    while (this.streamingQueue.length > 0) {
-      const item = this.streamingQueue.shift()
-      if (item) {
-        item.reject(new Error('Translation service destroyed'))
-      }
-    }
-
-    // Clear active jobs
-    this.activeStreamingJobs.clear()
-
     if (this.abortController) {
       this.abortController.abort()
       this.abortController = undefined
@@ -229,7 +132,6 @@ export class TranslationServiceImpl implements TranslationService {
       this.translator = undefined
     }
 
-    this.isStreamingProcessing = false
     this.isInitialized = false
 
     console.log('🔄 Translation service destroyed')
