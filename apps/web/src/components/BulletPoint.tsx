@@ -97,20 +97,32 @@ export function BulletPoint({
   ])
 
   return (
-    <div className="mb-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+    <div
+      data-testid="bullet-point"
+      className="mb-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100"
+    >
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-gray-800 text-xl leading-relaxed mb-3">
+          <p
+            data-testid="bullet-point-text"
+            className="text-gray-800 text-xl leading-relaxed mb-3"
+          >
             {bulletPoint.text}
           </p>
           {needsTranslation && isTranslating && (
-            <div className="mb-3 flex items-center gap-2 text-sm text-blue-600">
+            <div
+              data-testid="bullet-point-translating"
+              className="mb-3 flex items-center gap-2 text-sm text-blue-600"
+            >
               <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
               <span>Translating...</span>
             </div>
           )}
           {needsTranslation && textJa && (
-            <p className="text-gray-800 text-xl leading-relaxed border-t border-gray-100 pt-3">
+            <p
+              data-testid="bullet-point-translated-text"
+              className="text-gray-800 text-xl leading-relaxed border-t border-gray-100 pt-3"
+            >
               {textJa}
               {isTranslating && (
                 <span className="inline-block w-2 h-6 bg-blue-600 ml-1 animate-pulse"></span>

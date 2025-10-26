@@ -26,20 +26,33 @@ export function RecordingControlPanel({
   hasSystemAudio = false,
 }: RecordingControlPanelProps) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+    <div
+      data-testid="recording-control-panel"
+      className="bg-white border border-gray-200 rounded-xl shadow-sm"
+    >
       <div className="px-4 py-4">
         <div className="flex items-center justify-between">
           {/* Status Icons */}
-          <div className="flex items-center gap-6">
+          <div
+            data-testid="status-icons-container"
+            className="flex items-center gap-6"
+          >
             {/* Microphone Status */}
-            <div className="flex items-center gap-2">
+            <div
+              data-testid="microphone-status"
+              className="flex items-center gap-2"
+            >
               {isRecording ? (
                 <>
                   <Icon
+                    data-testid="microphone-icon-recording"
                     icon="mdi:microphone"
                     className="w-8 h-8 text-red-500 animate-pulse"
                   />
-                  <div title={userSpeaking ? 'Speaking' : 'Not speaking'}>
+                  <div
+                    data-testid="user-speaking-indicator"
+                    title={userSpeaking ? 'Speaking' : 'Not speaking'}
+                  >
                     <Icon
                       icon="mdi:account-voice"
                       className={`w-7 h-7 ${userSpeaking ? 'text-blue-600' : 'text-gray-300'}`}
@@ -49,10 +62,14 @@ export function RecordingControlPanel({
               ) : (
                 <>
                   <Icon
+                    data-testid="microphone-icon-off"
                     icon="mdi:microphone-off"
                     className="w-8 h-8 text-gray-400"
                   />
-                  <div title="Not speaking">
+                  <div
+                    data-testid="user-not-speaking-indicator"
+                    title="Not speaking"
+                  >
                     <Icon
                       icon="mdi:account-voice"
                       className="w-7 h-7 text-gray-300"
@@ -63,14 +80,21 @@ export function RecordingControlPanel({
             </div>
 
             {/* System Audio Status */}
-            <div className="flex items-center gap-2">
+            <div
+              data-testid="system-audio-status"
+              className="flex items-center gap-2"
+            >
               {isSystemCapturing ? (
                 <>
                   <Icon
+                    data-testid="system-audio-icon-capturing"
                     icon="mdi:monitor-speaker"
                     className="w-8 h-8 text-purple-500 animate-pulse"
                   />
-                  <div title={hasSystemAudio ? 'Audio detected' : 'No audio'}>
+                  <div
+                    data-testid="system-audio-indicator"
+                    title={hasSystemAudio ? 'Audio detected' : 'No audio'}
+                  >
                     <Icon
                       icon="mdi:waveform"
                       className={`w-7 h-7 ${hasSystemAudio ? 'text-blue-600' : 'text-gray-300'}`}
@@ -80,10 +104,11 @@ export function RecordingControlPanel({
               ) : (
                 <>
                   <Icon
+                    data-testid="system-audio-icon-off"
                     icon="mdi:monitor-off"
                     className="w-8 h-8 text-gray-400"
                   />
-                  <div title="No audio">
+                  <div data-testid="system-audio-no-indicator" title="No audio">
                     <Icon
                       icon="mdi:waveform"
                       className="w-7 h-7 text-gray-300"
@@ -95,10 +120,14 @@ export function RecordingControlPanel({
           </div>
 
           {/* Control Buttons */}
-          <div className="flex items-center gap-4">
+          <div
+            data-testid="control-buttons-container"
+            className="flex items-center gap-4"
+          >
             {/* Microphone Control */}
             {isRecording ? (
               <button
+                data-testid="stop-mic-button"
                 onClick={onStopRecording}
                 className="bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg transition-colors shadow-lg hover:shadow-xl"
                 title="Stop Mic"
@@ -108,6 +137,7 @@ export function RecordingControlPanel({
               </button>
             ) : (
               <button
+                data-testid="start-mic-button"
                 onClick={onStartRecording}
                 disabled={isInitializing}
                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white p-3 rounded-lg transition-colors shadow-lg hover:shadow-xl"
@@ -115,9 +145,17 @@ export function RecordingControlPanel({
                 aria-label={isInitializing ? 'Starting...' : 'Start Mic'}
               >
                 {isInitializing ? (
-                  <Icon icon="mdi:loading" className="w-6 h-6 animate-spin" />
+                  <Icon
+                    data-testid="start-mic-loading-icon"
+                    icon="mdi:loading"
+                    className="w-6 h-6 animate-spin"
+                  />
                 ) : (
-                  <Icon icon="mdi:microphone" className="w-6 h-6" />
+                  <Icon
+                    data-testid="start-mic-icon"
+                    icon="mdi:microphone"
+                    className="w-6 h-6"
+                  />
                 )}
               </button>
             )}
@@ -125,6 +163,7 @@ export function RecordingControlPanel({
             {/* System Audio Control */}
             {isSystemCapturing ? (
               <button
+                data-testid="stop-screen-button"
                 onClick={onStopSystemCapture}
                 className="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-lg transition-colors shadow-lg hover:shadow-xl"
                 title="Stop Screen"
@@ -134,6 +173,7 @@ export function RecordingControlPanel({
               </button>
             ) : (
               <button
+                data-testid="start-screen-button"
                 onClick={onStartSystemCapture}
                 disabled={isInitializing || !onStartSystemCapture}
                 className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white p-3 rounded-lg transition-colors shadow-lg hover:shadow-xl"
@@ -146,6 +186,7 @@ export function RecordingControlPanel({
 
             {/* End Session */}
             <button
+              data-testid="end-session-button"
               onClick={onEndSession}
               disabled={!onEndSession}
               className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white p-3 rounded-lg transition-colors shadow-lg hover:shadow-xl"

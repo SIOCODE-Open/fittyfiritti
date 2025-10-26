@@ -36,22 +36,37 @@ export function WelcomeScreen({
     )
   }
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
+    <div
+      data-testid="welcome-screen"
+      className="flex flex-col items-center justify-center min-h-screen"
+    >
       {/* Logo */}
-      <div className="mb-12 flex flex-row items-center space-x-4">
+      <div
+        data-testid="welcome-logo-section"
+        className="mb-12 flex flex-row items-center space-x-4"
+      >
         <img
+          data-testid="welcome-logo-image"
           src="/logo.png"
           alt="FittyFiritti Logo"
           className="w-32 h-32 mx-auto"
         />
-        <h1 className="text-6xl font-bold text-gray-900 mb-4">FittyFiritti</h1>
+        <h1
+          data-testid="welcome-title"
+          className="text-6xl font-bold text-gray-900 mb-4"
+        >
+          FittyFiritti
+        </h1>
       </div>
 
       {/* Language Settings */}
-      <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200 mb-12 w-full max-w-md">
+      <div
+        data-testid="language-settings-panel"
+        className="bg-white p-8 rounded-xl shadow-lg border border-gray-200 mb-12 w-full max-w-md"
+      >
         <div className="space-y-6">
           {/* Speaker Language */}
-          <div>
+          <div data-testid="speaker-language-section">
             <label
               htmlFor="speaker-language"
               className="block text-sm font-medium text-gray-700 mb-2"
@@ -60,6 +75,7 @@ export function WelcomeScreen({
             </label>
             <select
               id="speaker-language"
+              data-testid="speaker-language-select"
               value={speakerLanguage}
               onChange={e => setSpeakerLanguage(e.target.value as Language)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -73,7 +89,7 @@ export function WelcomeScreen({
           </div>
 
           {/* Other Party Language */}
-          <div>
+          <div data-testid="other-party-language-section">
             <label
               htmlFor="other-party-language"
               className="block text-sm font-medium text-gray-700 mb-2"
@@ -82,6 +98,7 @@ export function WelcomeScreen({
             </label>
             <select
               id="other-party-language"
+              data-testid="other-party-language-select"
               value={otherPartyLanguage}
               onChange={e => setOtherPartyLanguage(e.target.value as Language)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -95,10 +112,11 @@ export function WelcomeScreen({
           </div>
 
           {/* System Audio Analysis Setting */}
-          <div>
+          <div data-testid="system-audio-analysis-section">
             <label className="flex items-center space-x-3">
               <input
                 type="checkbox"
+                data-testid="include-system-audio-checkbox"
                 checked={includeSystemAudioInAnalysis}
                 onChange={e =>
                   setIncludeSystemAudioInAnalysis(e.target.checked)
@@ -109,7 +127,10 @@ export function WelcomeScreen({
                 Include other party's speech in analysis
               </span>
             </label>
-            <p className="text-xs text-gray-500 mt-1 ml-7">
+            <p
+              data-testid="system-audio-analysis-description"
+              className="text-xs text-gray-500 mt-1 ml-7"
+            >
               When checked, both your voice and the other party's voice will
               influence the right-side content organization. When unchecked,
               only your voice will create title changes and bullet points.
@@ -119,14 +140,20 @@ export function WelcomeScreen({
       </div>
 
       <button
+        data-testid="start-recording-button"
         onClick={handleStartRecording}
         disabled={isInitializing}
         className="w-32 h-32 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-full transition-all duration-200 shadow-2xl hover:shadow-3xl hover:scale-105 flex items-center justify-center group"
       >
         {isInitializing ? (
-          <Icon icon="mdi:loading" className="w-12 h-12 animate-spin" />
+          <Icon
+            data-testid="start-recording-loading-icon"
+            icon="mdi:loading"
+            className="w-12 h-12 animate-spin"
+          />
         ) : (
           <Icon
+            data-testid="start-recording-microphone-icon"
             icon="mdi:microphone"
             className="w-16 h-16 group-hover:scale-110 transition-transform"
           />

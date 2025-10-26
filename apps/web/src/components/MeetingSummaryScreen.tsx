@@ -102,20 +102,29 @@ export function MeetingSummaryScreen({
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
+    <div
+      data-testid="meeting-summary-screen"
+      className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8"
+    >
       {/* Header */}
-      <div className="mb-8">
+      <div data-testid="meeting-summary-header" className="mb-8">
         <h1 className="text-4xl font-bold text-gray-900 text-center">
           Meeting Summary
         </h1>
       </div>
 
       {/* Summary Card */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-8 max-w-4xl w-full">
+      <div
+        data-testid="meeting-summary-card"
+        className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-8 max-w-4xl w-full"
+      >
         {/* Summary Text */}
-        <div className="mb-6">
+        <div data-testid="meeting-summary-content" className="mb-6">
           {!summary && isGeneratingSummary ? (
-            <div className="flex items-center justify-center py-12">
+            <div
+              data-testid="summary-generating-loader"
+              className="flex items-center justify-center py-12"
+            >
               <Icon
                 icon="mdi:loading"
                 className="w-12 h-12 text-blue-600 animate-spin"
@@ -123,11 +132,17 @@ export function MeetingSummaryScreen({
             </div>
           ) : (
             <>
-              <p className="text-2xl leading-relaxed text-gray-900 whitespace-pre-wrap">
+              <p
+                data-testid="meeting-summary-text"
+                className="text-2xl leading-relaxed text-gray-900 whitespace-pre-wrap"
+              >
                 {summary}
               </p>
               {isGeneratingSummary && (
-                <div className="flex items-center gap-2 mt-4 text-blue-600">
+                <div
+                  data-testid="summary-streaming-indicator"
+                  className="flex items-center gap-2 mt-4 text-blue-600"
+                >
                   <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" />
                 </div>
               )}
@@ -137,9 +152,15 @@ export function MeetingSummaryScreen({
 
         {/* Translated Summary - Only show after summary generation is complete */}
         {shouldShowTranslation && summary && !isGeneratingSummary && (
-          <div className="pt-6 border-t border-gray-200">
+          <div
+            data-testid="meeting-summary-translation-section"
+            className="pt-6 border-t border-gray-200"
+          >
             {!translatedSummary && isTranslating ? (
-              <div className="flex items-center justify-center py-12">
+              <div
+                data-testid="translation-generating-loader"
+                className="flex items-center justify-center py-12"
+              >
                 <Icon
                   icon="mdi:loading"
                   className="w-12 h-12 text-blue-600 animate-spin"
@@ -147,11 +168,17 @@ export function MeetingSummaryScreen({
               </div>
             ) : (
               <>
-                <p className="text-2xl leading-relaxed text-gray-700 whitespace-pre-wrap">
+                <p
+                  data-testid="meeting-summary-translated-text"
+                  className="text-2xl leading-relaxed text-gray-700 whitespace-pre-wrap"
+                >
                   {translatedSummary}
                 </p>
                 {isTranslating && (
-                  <div className="flex items-center gap-2 mt-4 text-blue-600">
+                  <div
+                    data-testid="translation-streaming-indicator"
+                    className="flex items-center gap-2 mt-4 text-blue-600"
+                  >
                     <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" />
                   </div>
                 )}
@@ -162,9 +189,10 @@ export function MeetingSummaryScreen({
       </div>
 
       {/* Action Buttons - All in one row with equal sizes */}
-      <div className="flex gap-4 mb-8">
+      <div data-testid="meeting-summary-actions" className="flex gap-4 mb-8">
         {/* Download Transcriptions */}
         <button
+          data-testid="download-transcriptions-button"
           onClick={handleDownloadTranscriptions}
           disabled={transcriptionData.length === 0}
           className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors shadow-lg hover:shadow-xl disabled:cursor-not-allowed flex-1"
@@ -176,6 +204,7 @@ export function MeetingSummaryScreen({
 
         {/* Download Presentation */}
         <button
+          data-testid="download-presentation-button"
           onClick={handleDownloadPresentation}
           disabled={subjectHistory.length === 0}
           className="flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors shadow-lg hover:shadow-xl disabled:cursor-not-allowed flex-1"
@@ -187,6 +216,7 @@ export function MeetingSummaryScreen({
 
         {/* New Meeting Button - No text, just icon */}
         <button
+          data-testid="new-meeting-button"
           onClick={onNewMeeting}
           className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors shadow-lg hover:shadow-xl flex-1"
           title="Start a new meeting"

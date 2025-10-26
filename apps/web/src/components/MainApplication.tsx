@@ -454,7 +454,10 @@ export function MainApplication() {
   }, [])
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 p-2">
+    <div
+      data-testid="main-application"
+      className="h-screen flex flex-col bg-gray-50 p-2"
+    >
       <ErrorDisplay error={error} onClose={handleCloseError} />
 
       {/* Meeting Summary Screen */}
@@ -475,7 +478,7 @@ export function MainApplication() {
         !isRecording &&
         !hasStartedRecording &&
         !isSystemCapturing && (
-          <div className="flex-1">
+          <div data-testid="welcome-screen-container" className="flex-1">
             <WelcomeScreen
               onStartRecording={handleStartRecording}
               isInitializing={isInitializing}
@@ -486,10 +489,19 @@ export function MainApplication() {
       {/* When recording OR has started recording OR system capturing: Show two-column layout */}
       {!showMeetingSummary &&
         (isRecording || hasStartedRecording || isSystemCapturing) && (
-          <div className="flex-1 flex flex-col gap-2 min-h-0">
+          <div
+            data-testid="recording-layout"
+            className="flex-1 flex flex-col gap-2 min-h-0"
+          >
             {/* Cards Container - Takes up all available space */}
-            <div className="flex-1 flex gap-2 min-h-0">
-              <div className="flex-1 min-w-0">
+            <div
+              data-testid="cards-container"
+              className="flex-1 flex gap-2 min-h-0"
+            >
+              <div
+                data-testid="transcription-column"
+                className="flex-1 min-w-0"
+              >
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
                   <TranscriptionStream
                     transcriptionCards={transcriptionCards}
@@ -502,7 +514,7 @@ export function MainApplication() {
                 </div>
               </div>
 
-              <div className="flex-1 min-w-0">
+              <div data-testid="subject-column" className="flex-1 min-w-0">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
                   <SubjectDisplay
                     speakerLanguage={speakerLanguage}
@@ -513,7 +525,10 @@ export function MainApplication() {
             </div>
 
             {/* Control Panel - Shrinks to content */}
-            <div className="flex-shrink-0">
+            <div
+              data-testid="control-panel-container"
+              className="flex-shrink-0"
+            >
               <RecordingControlPanel
                 isRecording={isRecording}
                 isSystemCapturing={isSystemCapturing}

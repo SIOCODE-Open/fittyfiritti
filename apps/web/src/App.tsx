@@ -11,7 +11,10 @@ import { VADProvider } from './contexts/VADContext'
 
 function App() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div
+      data-testid="app-container"
+      className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100"
+    >
       <AIAvailabilityProvider>
         <VADProvider>
           <SystemAudioProvider>

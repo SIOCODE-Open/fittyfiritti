@@ -222,29 +222,45 @@ export function SubjectDisplay({
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div data-testid="subject-display" className="h-full flex flex-col">
       {/* Unified Header with Status, Navigation, and Export */}
-      <div className="flex justify-between items-center p-2 border-b border-gray-200 bg-gray-50">
+      <div
+        data-testid="subject-display-header"
+        className="flex justify-between items-center p-2 border-b border-gray-200 bg-gray-50"
+      >
         {/* Left: Status Icon + Navigation */}
-        <div className="flex items-center gap-2">
+        <div
+          data-testid="subject-display-status-nav"
+          className="flex items-center gap-2"
+        >
           {/* Status Icon */}
           {isPresentationPaused ? (
-            <div title="Presentation Paused">
+            <div
+              data-testid="presentation-paused-indicator"
+              title="Presentation Paused"
+            >
               <Icon
                 icon="mdi:pause-circle"
                 className="w-6 h-6 text-amber-600"
               />
             </div>
           ) : (
-            <div title="Presentation Running">
+            <div
+              data-testid="presentation-running-indicator"
+              title="Presentation Running"
+            >
               <Icon icon="mdi:play-circle" className="w-6 h-6 text-green-600" />
             </div>
           )}
 
           {/* Navigation Controls */}
           {currentSubject && (
-            <div className="flex gap-1 ml-2">
+            <div
+              data-testid="subject-navigation-controls"
+              className="flex gap-1 ml-2"
+            >
               <button
+                data-testid="subject-previous-button"
                 onClick={handlePrevious}
                 disabled={!canNavigatePrevious}
                 className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
@@ -257,6 +273,7 @@ export function SubjectDisplay({
                 />
               </button>
               <button
+                data-testid="subject-next-button"
                 onClick={handleNext}
                 disabled={!canNavigateNext}
                 className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
@@ -268,7 +285,10 @@ export function SubjectDisplay({
                   className="w-5 h-5 text-gray-600"
                 />
               </button>
-              <div className="flex items-center px-2 text-sm text-gray-600">
+              <div
+                data-testid="subject-navigation-counter"
+                className="flex items-center px-2 text-sm text-gray-600"
+              >
                 {currentHistoryIndex + 1} / {subjectHistory.length}
               </div>
             </div>
@@ -277,6 +297,7 @@ export function SubjectDisplay({
 
         {/* Right: Export Button */}
         <button
+          data-testid="export-subjects-button"
           onClick={handleExportMarkdown}
           disabled={subjectHistory.length === 0}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
@@ -288,7 +309,10 @@ export function SubjectDisplay({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div
+        data-testid="subject-display-content"
+        className="flex-1 overflow-y-auto p-4"
+      >
         {/* Current Subject */}
         {currentSubject && (
           <SubjectCard
@@ -300,14 +324,20 @@ export function SubjectDisplay({
         )}
 
         {isAnalyzing && (
-          <div className="mb-4 flex items-center gap-2 text-sm text-blue-600">
+          <div
+            data-testid="subject-analyzing-indicator"
+            className="mb-4 flex items-center gap-2 text-sm text-blue-600"
+          >
             <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
 
         {/* No content state */}
         {!currentSubject && (
-          <div className="h-full flex items-center justify-center">
+          <div
+            data-testid="subject-display-empty"
+            className="h-full flex items-center justify-center"
+          >
             <div className="text-center p-8">
               <div className="text-6xl mb-4">
                 <Icon icon="mdi:brain" className="w-12 h-12 text-gray-400" />

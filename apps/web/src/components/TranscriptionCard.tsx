@@ -140,6 +140,7 @@ export function TranscriptionCard({
 
   return (
     <div
+      data-testid={`transcription-card-${card.type}`}
       className={`rounded-xl p-6 shadow-lg border-2 ${
         card.type === 'microphone'
           ? 'bg-green-800 text-white border-green-600'
@@ -148,15 +149,21 @@ export function TranscriptionCard({
     >
       {/* Transcription Content */}
       {isTranscribing && !originalText && (
-        <div className="flex items-center gap-3 mb-4">
+        <div
+          data-testid="transcription-loading"
+          className="flex items-center gap-3 mb-4"
+        >
           <Icon icon="mdi:microphone" className="w-6 h-6 animate-pulse" />
           <span className="text-xl opacity-75">Transcribing...</span>
         </div>
       )}
 
       {originalText && (
-        <div className="mb-4">
-          <div className="text-2xl leading-relaxed font-medium">
+        <div data-testid="transcription-text-container" className="mb-4">
+          <div
+            data-testid="transcription-original-text"
+            className="text-2xl leading-relaxed font-medium"
+          >
             {originalText}
             {isTranscribing && (
               <span className="inline-block w-2 h-8 bg-white bg-opacity-60 ml-1 animate-pulse"></span>
@@ -169,14 +176,23 @@ export function TranscriptionCard({
       {shouldShowTranslations && originalText && (
         <>
           {isTranslating && !translatedText && (
-            <div className="flex items-center gap-3 pt-4 border-t border-opacity-30 border-white mb-2">
+            <div
+              data-testid="translation-loading"
+              className="flex items-center gap-3 pt-4 border-t border-opacity-30 border-white mb-2"
+            >
               <Icon icon="mdi:translate" className="w-6 h-6 animate-pulse" />
               <span className="text-xl opacity-75">Translating...</span>
             </div>
           )}
           {translatedText && (
-            <div className="pt-4 border-t border-opacity-30 border-white">
-              <div className="text-2xl leading-relaxed opacity-90">
+            <div
+              data-testid="translation-text-container"
+              className="pt-4 border-t border-opacity-30 border-white"
+            >
+              <div
+                data-testid="transcription-translated-text"
+                className="text-2xl leading-relaxed opacity-90"
+              >
                 {translatedText}
                 {isTranslating && (
                   <span className="inline-block w-2 h-8 bg-white bg-opacity-60 ml-1 animate-pulse"></span>
