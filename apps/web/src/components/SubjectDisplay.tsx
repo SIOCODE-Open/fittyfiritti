@@ -109,7 +109,10 @@ export function SubjectDisplay({
             title: result.action.title,
           }
           changeSubject(newSubject)
-        } else if (result.action.action === 'addBulletPoint') {
+        } else if (
+          result.action.action === 'addSingleBulletPoint' ||
+          result.action.action === 'addMultipleBulletPoints'
+        ) {
           // If we don't have a current subject, create one first
           if (!currentSubject) {
             const bootstrapTitle =
@@ -124,14 +127,32 @@ export function SubjectDisplay({
             changeSubject(bootstrapSubject)
           }
 
-          // Add bullet point directly to state
-          const bulletPoint: BulletPointItem = {
-            id: Math.random().toString(36).substr(2, 9),
-            text: result.action.text,
-            timestamp: Date.now(),
+          // Handle single bullet point
+          if (result.action.action === 'addSingleBulletPoint') {
+            const bulletPoint: BulletPointItem = {
+              id: Math.random().toString(36).substr(2, 9),
+              text: result.action.text,
+              timestamp: Date.now(),
+            }
+            setBulletPoints(prev => [...prev, bulletPoint])
+            addBulletPointToHistory(bulletPoint)
           }
-          setBulletPoints(prev => [...prev, bulletPoint])
-          addBulletPointToHistory(bulletPoint)
+          // Handle multiple bullet points
+          else if (result.action.action === 'addMultipleBulletPoints') {
+            const newBulletPoints: BulletPointItem[] =
+              result.action.bulletPoints.map(bp => ({
+                id: Math.random().toString(36).substr(2, 9),
+                text: bp.text,
+                timestamp: Date.now(),
+              }))
+
+            setBulletPoints(prev => [...prev, ...newBulletPoints])
+
+            // Add each bullet point to history
+            newBulletPoints.forEach(bulletPoint => {
+              addBulletPointToHistory(bulletPoint)
+            })
+          }
         }
       } catch (error) {
         console.error('Failed to analyze transcription:', error)

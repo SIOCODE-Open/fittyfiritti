@@ -9,9 +9,14 @@ export interface SubjectChange {
   title: string
 }
 
-export interface BulletPoint {
-  action: 'addBulletPoint'
+export interface SingleBulletPoint {
+  action: 'addSingleBulletPoint'
   text: string
+}
+
+export interface MultipleBulletPoints {
+  action: 'addMultipleBulletPoints'
+  bulletPoints: { text: string }[]
 }
 
 export interface PausePresentation {
@@ -28,7 +33,8 @@ export interface NoOperation {
 
 export type SubjectAction =
   | SubjectChange
-  | BulletPoint
+  | SingleBulletPoint
+  | MultipleBulletPoints
   | PausePresentation
   | ResumePresentation
   | NoOperation
@@ -58,7 +64,8 @@ const actionSchemaRunning: JSONSchema = {
       enum: [
         'pausePresentation',
         'changeSubject',
-        'addBulletPoint',
+        'addSingleBulletPoint',
+        'addMultipleBulletPoints',
         'noOperation',
       ],
     },
@@ -88,11 +95,33 @@ const bulletPointSchema: JSONSchema = {
   required: ['text'],
 }
 
+const multipleBulletPointsSchema: JSONSchema = {
+  type: 'object',
+  properties: {
+    bulletPoints: {
+      type: 'array',
+      description: 'Array of bullet points to add',
+      items: {
+        type: 'object',
+        properties: {
+          text: {
+            type: 'string',
+            description: 'Summary text for each bullet point',
+          },
+        },
+        required: ['text'],
+      },
+    },
+  },
+  required: ['bulletPoints'],
+}
+
 export class SubjectDetectionService {
   private actionSessionPaused: LanguageModelSession | null = null
   private actionSessionRunning: LanguageModelSession | null = null
   private titleSession: LanguageModelSession | null = null
   private bulletPointSession: LanguageModelSession | null = null
+  private multipleBulletPointsSession: LanguageModelSession | null = null
   private isInitialized = false
   private transcriptionHistory: string[] = []
   private maxHistorySize = 10 // Keep last 10 transcriptions for context
@@ -139,15 +168,18 @@ Respond only with JSON containing the action.`,
 Your only job is to determine if a transcription represents:
 - "pausePresentation": The speaker is explicitly addressing the computer to pause the presentation (e.g., "Hey computer, pause the presentation", "Computer, stop")
 - "changeSubject": The speaker is clearly starting a NEW topic/subject
-- "addBulletPoint": The speaker is continuing the current topic and providing information
+- "addSingleBulletPoint": The speaker is providing a SINGLE piece of information or making ONE point
+- "addMultipleBulletPoints": The speaker is providing MULTIPLE distinct pieces of information or making SEVERAL separate points in one transcription
 - "noOperation": Small talk, greetings, or unrelated casual conversation
 
 Guidelines:
 - ONLY detect "pausePresentation" when the speaker explicitly addresses the computer with keywords like "computer", "pause", "stop", "halt"
-- HEAVILY prefer "addBulletPoint" over "changeSubject" - only use "changeSubject" for clear topic transitions
+- HEAVILY prefer "addSingleBulletPoint" or "addMultipleBulletPoints" over "changeSubject" - only use "changeSubject" for clear topic transitions
 - Look for phrases like "now let's talk about", "moving on to", "next topic" for "changeSubject"
+- Choose "addMultipleBulletPoints" when the transcription contains multiple distinct facts, items, or points (e.g., lists, enumerations, multiple statements)
+- Choose "addSingleBulletPoint" when the transcription contains a single coherent idea or fact
 - Small talk should be "noOperation"
-- If in doubt between "addBulletPoint" and "changeSubject", choose "addBulletPoint"
+- If in doubt between bullet point actions and "changeSubject", choose a bullet point action
 
 Respond only with JSON containing the action.`,
           },
@@ -183,16 +215,39 @@ Respond only with JSON containing the title.`,
         initialPrompts: [
           {
             role: 'system',
-            content: `You create concise bullet points from speech transcriptions.
+            content: `You create a single concise bullet point from a speech transcription.
 
 Extract the key information and create a clear, factual bullet point.
 
 Guidelines:
-- Focus on specific facts, features, or actions mentioned
+- Focus on the specific fact, feature, or action mentioned
 - Keep text concise (5-15 words)
 - Extract concrete information, not general statements
 
 Respond only with JSON containing text.`,
+          },
+        ],
+      })
+
+      // Initialize multiple bullet points generation session
+      this.multipleBulletPointsSession = await createLanguageModelSession({
+        expectedInputs: [{ type: 'text', languages: ['en'] }],
+        expectedOutputs: [{ type: 'text', languages: ['en'] }],
+        initialPrompts: [
+          {
+            role: 'system',
+            content: `You create multiple concise bullet points from a speech transcription that contains several distinct pieces of information.
+
+Extract each separate piece of information and create clear, factual bullet points.
+
+Guidelines:
+- Identify each distinct fact, feature, or action mentioned
+- Create a separate bullet point for each piece of information
+- Keep each bullet point concise (5-15 words)
+- Extract concrete information, not general statements
+- Maintain the logical order presented in the transcription
+
+Respond only with JSON containing an array of bulletPoints, each with a text property.`,
           },
         ],
       })
@@ -326,8 +381,10 @@ New transcription: "${transcription}"`
         const titleResult = JSON.parse(titleResponse)
 
         if (!titleResult.title || titleResult.title.trim() === '') {
-          console.warn('⚠️ Empty title generated, falling back to bullet point')
-          // Fall back to bullet point
+          console.warn(
+            '⚠️ Empty title generated, falling back to single bullet point'
+          )
+          // Fall back to single bullet point
           const bulletResponse = await this.bulletPointSession!.prompt(
             `Create a bullet point from: "${transcription}"`,
             {
@@ -337,7 +394,7 @@ New transcription: "${transcription}"`
           const bulletResult = JSON.parse(bulletResponse)
 
           action = {
-            action: 'addBulletPoint',
+            action: 'addSingleBulletPoint',
             text: bulletResult.text || transcription,
           }
         } else {
@@ -346,8 +403,8 @@ New transcription: "${transcription}"`
             title: titleResult.title.trim(),
           }
         }
-      } else {
-        // Step 2b: Get bullet point details
+      } else if (actionResult.action === 'addSingleBulletPoint') {
+        // Step 2b: Get single bullet point details
         const bulletResponse = await this.bulletPointSession!.prompt(
           `Create a bullet point from: "${transcription}"`,
           {
@@ -358,7 +415,37 @@ New transcription: "${transcription}"`
         const bulletResult = JSON.parse(bulletResponse)
 
         action = {
-          action: 'addBulletPoint',
+          action: 'addSingleBulletPoint',
+          text: bulletResult.text || transcription,
+        }
+      } else if (actionResult.action === 'addMultipleBulletPoints') {
+        // Step 2c: Get multiple bullet points details
+        const bulletResponse = await this.multipleBulletPointsSession!.prompt(
+          `Create multiple bullet points from: "${transcription}"`,
+          {
+            responseConstraint: multipleBulletPointsSchema,
+          }
+        )
+
+        const bulletResult = JSON.parse(bulletResponse)
+
+        action = {
+          action: 'addMultipleBulletPoints',
+          bulletPoints: bulletResult.bulletPoints || [{ text: transcription }],
+        }
+      } else {
+        // Fallback to single bullet point for unknown actions
+        const bulletResponse = await this.bulletPointSession!.prompt(
+          `Create a bullet point from: "${transcription}"`,
+          {
+            responseConstraint: bulletPointSchema,
+          }
+        )
+
+        const bulletResult = JSON.parse(bulletResponse)
+
+        action = {
+          action: 'addSingleBulletPoint',
           text: bulletResult.text || transcription,
         }
       }
@@ -432,6 +519,10 @@ New transcription: "${transcription}"`
     if (this.bulletPointSession) {
       this.bulletPointSession.destroy()
       this.bulletPointSession = null
+    }
+    if (this.multipleBulletPointsSession) {
+      this.multipleBulletPointsSession.destroy()
+      this.multipleBulletPointsSession = null
     }
 
     this.transcriptionHistory = []
