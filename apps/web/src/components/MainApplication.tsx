@@ -532,11 +532,7 @@ export function MainApplication() {
             >
               <div
                 data-testid="transcription-column"
-                className={
-                  presentationMode === 'transcription-only'
-                    ? 'flex-1 min-w-0'
-                    : 'flex-1 min-w-0'
-                }
+                className="flex-1 min-w-0"
               >
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
                   <TranscriptionStream
