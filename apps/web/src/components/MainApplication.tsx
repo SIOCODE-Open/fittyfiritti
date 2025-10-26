@@ -131,6 +131,20 @@ export function MainApplication() {
     []
   )
 
+  // Callback to handle empty transcriptions - remove the card
+  const handleTranscriptionEmpty = useCallback((cardId: string) => {
+    console.log('🗑️ Removing empty transcription card:', cardId)
+
+    // Remove from transcriptionCards or systemTranscriptionCards
+    setTranscriptionCards(prev => prev.filter(card => card.id !== cardId))
+    setSystemTranscriptionCards(prev => prev.filter(card => card.id !== cardId))
+
+    // Also remove from transcription data ref if it exists
+    transcriptionDataRef.current = transcriptionDataRef.current.filter(
+      d => d.cardId !== cardId
+    )
+  }, [])
+
   const handleAudioChunk = useCallback(
     async (chunk: AudioChunk) => {
       try {
@@ -510,6 +524,7 @@ export function MainApplication() {
                     otherPartyLanguage={otherPartyLanguage}
                     onTranscriptionComplete={handleTranscriptionComplete}
                     onTranslationComplete={handleTranslationComplete}
+                    onTranscriptionEmpty={handleTranscriptionEmpty}
                   />
                 </div>
               </div>

@@ -15,6 +15,7 @@ interface TranscriptionStreamProps {
     timestamp: number
   ) => void
   onTranslationComplete?: (cardId: string, translatedText: string) => void
+  onTranscriptionEmpty?: (cardId: string) => void
 }
 
 export interface TranscriptionCardData {
@@ -39,6 +40,7 @@ export function TranscriptionStream({
   otherPartyLanguage,
   onTranscriptionComplete,
   onTranslationComplete,
+  onTranscriptionEmpty,
 }: TranscriptionStreamProps) {
   // Store transcription and translation data in order for export
   const cardDataRef = useRef<CardData[]>([])
@@ -197,6 +199,7 @@ export function TranscriptionStream({
               shouldShowTranslations={shouldShowTranslations}
               onTranscriptionComplete={handleTranscriptionCompleteWrapper}
               onTranslationComplete={handleTranslationCompleteWrapper}
+              onTranscriptionEmpty={onTranscriptionEmpty}
             />
           ))
         )}

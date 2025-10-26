@@ -13,6 +13,7 @@ interface TranscriptionCardProps {
     timestamp: number
   ) => void
   onTranslationComplete?: (cardId: string, translatedText: string) => void
+  onTranscriptionEmpty?: (cardId: string) => void
 }
 
 export function TranscriptionCard({
@@ -20,6 +21,7 @@ export function TranscriptionCard({
   shouldShowTranslations,
   onTranscriptionComplete,
   onTranslationComplete,
+  onTranscriptionEmpty,
 }: TranscriptionCardProps) {
   const [originalText, setOriginalText] = useState('')
   const [translatedText, setTranslatedText] = useState('')
@@ -66,13 +68,24 @@ export function TranscriptionCard({
         setTranscriptionComplete(true)
         isTranscribingRef.current = false
 
-        if (onTranscriptionComplete && accumulated.trim()) {
-          onTranscriptionComplete(card.id, accumulated, card.timestamp)
+        if (accumulated.trim()) {
+          if (onTranscriptionComplete) {
+            onTranscriptionComplete(card.id, accumulated, card.timestamp)
+          }
+        } else {
+          // Notify parent that transcription is empty so card can be removed
+          if (onTranscriptionEmpty) {
+            onTranscriptionEmpty(card.id)
+          }
         }
       } catch (error) {
         console.error('❌ Transcription failed for card:', card.id, error)
         setIsTranscribing(false)
         isTranscribingRef.current = false
+        // Notify parent to remove card on error
+        if (onTranscriptionEmpty) {
+          onTranscriptionEmpty(card.id)
+        }
       }
     }
 
