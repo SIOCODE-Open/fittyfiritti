@@ -11,6 +11,7 @@ export default tseslint.config(
       '**/dist/**', 
       '**/node_modules/**',
       '**/public/**/*.{js,mjs,wasm,onnx}', // Ignore VAD assets in public directory
+      '**/scripts/**', // Ignore node scripts
     ],
   },
   eslint.configs.recommended,

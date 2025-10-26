@@ -10,7 +10,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write src",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "zip": "node scripts/zip-dist.js"
   },
   "dependencies": {
     "@fittyfiritti/built-in-ai-api": "workspace:*",
@@ -28,6 +29,7 @@
     "prettier-plugin-organize-imports": "*",
     "tailwindcss": "*",
     "typescript": "*",
-    "vite": "*"
+    "vite": "*",
+    "zip-a-folder": "^3.1.9"
   }
 }
