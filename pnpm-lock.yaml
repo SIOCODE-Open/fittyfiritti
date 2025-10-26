@@ -75,9 +75,25 @@ importers:
         specifier: ^5.4.10
         version: 5.4.21(@types/node@22.18.12)(lightningcss@1.30.2)
 
-  apps/editor:
+  apps/test:
     dependencies:
-      '@diai/built-in-ai-api':
+      '@fittyfiritti/built-in-ai-api':
+        specifier: workspace:*
+        version: link:../../packages/built-in-ai-api
+    devDependencies:
+      '@playwright/test':
+        specifier: '*'
+        version: 1.56.1
+      '@types/node':
+        specifier: '*'
+        version: 22.18.12
+      typescript:
+        specifier: '*'
+        version: 5.9.3
+
+  apps/web:
+    dependencies:
+      '@fittyfiritti/built-in-ai-api':
         specifier: workspace:*
         version: link:../../packages/built-in-ai-api
       '@iconify/react':
@@ -120,22 +136,6 @@ importers:
       vite:
         specifier: '*'
         version: 5.4.21(@types/node@22.18.12)(lightningcss@1.30.2)
-
-  apps/test:
-    dependencies:
-      '@diai/built-in-ai-api':
-        specifier: workspace:*
-        version: link:../../packages/built-in-ai-api
-    devDependencies:
-      '@playwright/test':
-        specifier: '*'
-        version: 1.56.1
-      '@types/node':
-        specifier: '*'
-        version: 22.18.12
-      typescript:
-        specifier: '*'
-        version: 5.9.3
 
   packages/built-in-ai-api:
     devDependencies:

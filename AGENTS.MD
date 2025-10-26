@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**DiAI** is a modern web application that provides real-time audio transcription and intelligent note organization using Chrome's Built-in AI API (Gemini Nano). The application listens to microphone input, transcribes speech in real-time using sliding window processing, and automatically organizes content into structured hierarchical notes with multi-level categorization and asynchronous English to Japanese translation.
+**FittyFiritti** is a modern web application that provides real-time audio transcription and intelligent note organization using Chrome's Built-in AI API (Gemini Nano). The application listens to microphone input, transcribes speech in real-time using sliding window processing, and automatically organizes content into structured hierarchical notes with multi-level categorization and asynchronous English to Japanese translation.
 
 ## Project Purpose
 
@@ -20,10 +20,10 @@ This project demonstrates and provides tooling for:
 The project follows a monorepo architecture with the following key directories:
 
 ### `/apps/` - Applications
-- **`apps/editor/`** - Main React application (currently starter content, will be developed further)
+- **`apps/web/`** - Main React application (currently starter content, will be developed further)
   - Built with Vite + React + TypeScript
   - Uses Tailwind CSS for styling
-  - Integrates with `@diai/built-in-ai-api` package
+  - Integrates with `@fittyfiritti/built-in-ai-api` package
   - **Status**: Primary development target
 
 - **`apps/test/`** - End-to-end testing suite

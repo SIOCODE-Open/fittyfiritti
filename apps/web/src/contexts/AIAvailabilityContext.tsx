@@ -2,7 +2,7 @@
 import {
   checkLanguageModelAvailability,
   createLanguageModelSession,
-} from '@diai/built-in-ai-api'
+} from '@fittyfiritti/built-in-ai-api'
 import {
   createContext,
   ReactNode,

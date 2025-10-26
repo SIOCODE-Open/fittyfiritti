@@ -1,5 +1,5 @@
 {
-  "name": "@diai/test",
+  "name": "@fittyfiritti/test",
   "version": "0.1.0",
   "type": "module",
   "private": true,
@@ -12,7 +12,7 @@
     "install-deps": "playwright install"
   },
   "dependencies": {
-    "@diai/built-in-ai-api": "workspace:*"
+    "@fittyfiritti/built-in-ai-api": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "*",

@@ -1,8 +1,8 @@
-import type { LanguageModelSession } from '@diai/built-in-ai-api'
+import type { LanguageModelSession } from '@fittyfiritti/built-in-ai-api'
 import {
   createMultiModalSession,
   transcribeAudioStreaming,
-} from '@diai/built-in-ai-api'
+} from '@fittyfiritti/built-in-ai-api'
 import { TranscriptionService } from '../types'
 
 export class TranscriptionServiceImpl implements TranscriptionService {

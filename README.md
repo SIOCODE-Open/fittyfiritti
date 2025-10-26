@@ -1,8 +1,10 @@
-# DiAI
+# FittyFiritti
 
 **Real-time AI-Powered Transcription & Intelligent Note Organization**
 
 A modern web application that provides real-time audio transcription from multiple sources with intelligent note organization using Chrome's Built-in AI API (Gemini Nano). The app captures speech from your microphone and/or system audio (screen sharing), transcribes it in real-time with streaming output, automatically organizes content into structured hierarchical notes, and provides bidirectional translation between multiple languages—all powered by on-device AI with no external API calls.
+
+![](docs/main-flow.png)
 
 ---
 
@@ -166,8 +168,8 @@ The application uses React Context for state management and dependency injection
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/diai.git
-cd diai
+git clone https://github.com/yourusername/fittyfiritti.git
+cd fittyfiritti
 
 # Install dependencies
 pnpm install
@@ -191,7 +193,7 @@ pnpm dev
 # Build for production
 pnpm build
 
-# The built files will be in apps/editor/dist
+# The built files will be in apps/web/dist
 ```
 
 ### Quality Checks

@@ -37,16 +37,18 @@ export function WelcomeScreen({
   }
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
-      <div className="text-center mb-12">
-        <h1 className="text-6xl font-bold text-gray-900 mb-4">DiAI</h1>
+      {/* Logo */}
+      <div className="mb-12 flex flex-row items-center space-x-4">
+        <img
+          src="/logo.png"
+          alt="FittyFiritti Logo"
+          className="w-32 h-32 mx-auto"
+        />
+        <h1 className="text-6xl font-bold text-gray-900 mb-4">FittyFiritti</h1>
       </div>
 
       {/* Language Settings */}
       <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200 mb-12 w-full max-w-md">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6 text-center">
-          Language Settings
-        </h2>
-
         <div className="space-y-6">
           {/* Speaker Language */}
           <div>

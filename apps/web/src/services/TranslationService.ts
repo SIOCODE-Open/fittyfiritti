@@ -1,7 +1,7 @@
 import {
   checkTranslatorAvailability,
   translateTextStreaming,
-} from '@diai/built-in-ai-api'
+} from '@fittyfiritti/built-in-ai-api'
 import { TranslationService } from '../types'
 
 export class TranslationServiceImpl implements TranslationService {

@@ -2,7 +2,7 @@ import {
   createLanguageModelSession,
   JSONSchema,
   LanguageModelSession,
-} from '@diai/built-in-ai-api'
+} from '@fittyfiritti/built-in-ai-api'
 
 export interface SubjectChange {
   action: 'changeSubject'

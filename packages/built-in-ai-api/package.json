@@ -1,5 +1,5 @@
 {
-  "name": "@diai/built-in-ai-api",
+  "name": "@fittyfiritti/built-in-ai-api",
   "version": "0.1.0",
   "type": "module",
   "description": "Type definitions for the Chrome Built-in AI API",
