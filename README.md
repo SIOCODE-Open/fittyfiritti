@@ -1,318 +1,141 @@
 # FittyFiritti
 
-**Real-time AI-Powered Transcription & Intelligent Note Organization**
+<p align="center">
+  <img src="apps/web/public/logo.png" alt="FittyFiritti Logo" width="200"/>
+</p>
 
-A modern web application that provides real-time audio transcription from multiple sources with intelligent note organization using Chrome's Built-in AI API (Gemini Nano). The app captures speech from your microphone and/or system audio (screen sharing), transcribes it in real-time with streaming output, automatically organizes content into structured hierarchical notes, and provides bidirectional translation between multiple languages—all powered by on-device AI with no external API calls.
+**Real-time transcription, translation, and presentation editing for bidirectional communication assistance**
 
-![](docs/main-flow.png)
-
----
-
-## ✨ Core Features
-
-### 🎙️ Multi-Source Audio Capture
-- **Voice Activity Detection (VAD)**: Intelligent voice activity detection using `@ricky0123/vad-web` that automatically captures speech segments when you speak
-- **Microphone Capture**: Continuous microphone audio capture with automatic speech segmentation
-- **System Audio Capture**: Screen sharing with system audio capture to transcribe other party's speech (e.g., video calls, presentations)
-- **Dual-Stream Processing**: Capture and process both your voice and system audio simultaneously
-- **Smart Segmentation**: Automatic audio segmentation based on speech detection (VAD-based for microphone, time-based for system audio)
-
-### 🧠 AI-Powered Transcription
-- **Real-time Streaming**: Streaming transcription output as audio is processed—see transcription text appear word-by-word
-- **Multi-Language Support**: Transcribe audio in English, Spanish, or Japanese with language-specific prompts and models
-- **On-Device Processing**: Uses Chrome's Built-in AI API (Gemini Nano) for audio-to-text conversion—completely private, no cloud APIs
-- **Multi-Modal AI**: Leverages Chrome's multi-modal language model with audio input support
-- **Parallel Processing**: Multiple transcription cards can be processed simultaneously
-- **Optimized Prompts**: Language-specific system prompts for accurate transcription
-
-### 📝 Intelligent Subject Detection & Organization
-- **AI Intent Recognition**: Automatic detection of when the speaker changes topics or adds details to the current topic
-- **Hierarchical Note Structure**: Organizes transcriptions into:
-  - **Subjects/Topics**: Top-level topic cards with descriptive titles
-  - **Bullet Points**: Key information extracted from transcriptions
-- **State-Based Detection**: Different detection logic for paused vs. running presentation states
-- **Smart Actions**:
-  - `pausePresentation`: Explicit computer commands to pause analysis
-  - `resumePresentation`: Explicit computer commands to resume analysis
-  - `changeSubject`: Detects when speaker starts a new topic
-  - `addBulletPoint`: Extracts key information for the current topic
-  - `noOperation`: Filters out small talk and casual conversation
-- **Context-Aware**: Maintains transcription history (last 10 items) to understand context
-- **Title Generation**: AI-generated descriptive titles for each new subject
-- **Bullet Point Extraction**: AI-generated concise summaries (5-15 words) of key information
-- **Configurable Analysis**: Choose whether system audio (other party) influences subject organization
-
-### 🌐 Bidirectional Translation
-- **Multi-Language Translation**: Translate between English, Spanish, and Japanese
-- **Streaming Translation**: See translations appear in real-time as they're generated
-- **Dual Translation Services**:
-  - **Speaker → Other Party**: Translate your transcriptions to the other party's language
-  - **Other Party → Speaker**: Translate system audio transcriptions to your language
-- **Smart Translation API**: Uses Chrome's native Translation API when available, falls back to prompt-based translation
-- **Subject Title Translation**: Translates subject titles in addition to bullet points
-
-### 🎨 Modern User Interface
-- **Dual-Panel Layout**: 
-  - Left panel: Real-time transcription stream with cards for each audio segment
-  - Right panel: Organized subject hierarchy with titles and bullet points
-- **Welcome Screen**: Language configuration before starting:
-  - Select your language (English, Spanish, Japanese)
-  - Select other party's language
-  - Toggle whether system audio influences analysis
-- **Recording Control Panel**:
-  - Start/stop microphone recording
-  - Start/stop system audio capture
-  - End session and return to welcome screen
-  - Visual indicators for active recording and system capture
-  - Real-time user speech detection indicator
-- **Transcription Cards**:
-  - Timestamp display
-  - Streaming transcription text
-  - Streaming translation (when applicable)
-  - Distinct styling for microphone vs. system audio
-- **Subject Cards**:
-  - Collapsible/expandable design
-  - Subject titles with translations
-  - Bullet points with translations
-  - Timestamp information
-  - Navigation between subject history
-- **Error Handling**: User-friendly error messages for permissions and API issues
-- **Loading States**: Clear loading indicators during initialization
+🔗 **[https://fittyfiritti.com](https://fittyfiritti.com)**
 
 ---
 
-## 🏗️ Architecture
+## 🎯 Problem Statement
 
-### Service Layer
+FittyFiritti solves real-world communication and presentation challenges:
 
-#### **TranscriptionService** (`TranscriptionServiceImpl`)
-- Creates multi-modal AI sessions with audio input enabled
-- Configures language-specific prompts and expected I/O
-- Provides streaming transcription via `transcribeAudioStreaming()`
-- Handles abort signals for cancellation
-- Manages session lifecycle (initialize, destroy)
-- Temperature: 0.3, TopK: 5 for consistent transcription
+- **🎤 Live Demonstrations**: Keep track of your presentation bullet points as you speak, automatically organizing your thoughts into a structured format
+- **🌐 International Meetings**: Bridge language barriers without hiring a human interpreter—your speech is translated in real-time to the other party's language
+- **📊 Presentation Tracking**: Never lose track of your talking points during long presentations or lectures
+- **💼 Multilingual Collaboration**: Enable seamless communication in meetings where participants speak different languages
 
-#### **SubjectDetectionService**
-- Manages 4 separate AI sessions:
-  - `actionSessionPaused`: Detects resume commands when paused
-  - `actionSessionRunning`: Detects actions when running (pause, changeSubject, addBulletPoint, noOperation)
-  - `titleSession`: Generates descriptive titles for new subjects
-  - `bulletPointSession`: Extracts concise bullet points
-- Maintains transcription history (last 10 items) for context
-- Uses structured JSON output with JSON schemas for reliable parsing
-- Tracks presentation state (paused/running)
-- Provides confidence scores for detection results
-
-#### **TranslationService** (`TranslationServiceImpl`)
-- Dual translation services for bidirectional translation
-- Uses Chrome's Translation API when available
-- Falls back to prompt-based streaming translation
-- Configurable source and target languages
-- Streaming translation output
-
-#### **AudioCaptureService** (`AudioCaptureServiceImpl`)
-- Captures microphone audio with echo cancellation and noise suppression
-- Creates MediaRecorder with WebM/Opus codec
-- Sample rate: 16kHz (optimized for speech)
-- Provides segment completion mechanism
-- Callback-based architecture for audio chunks
-
-#### **SystemAudioCaptureService**
-- Captures system audio via screen sharing (getDisplayMedia)
-- Extracts audio tracks from display stream
-- Includes audio analysis with Web Audio API
-- Provides waveform data for visualization
-- Handles screen sharing lifecycle
-- Callback-based architecture for audio chunks
-
-### Context Architecture
-
-The application uses React Context for state management and dependency injection:
-
-- **AIAvailabilityContext**: Checks Chrome Built-in AI availability on startup
-- **AudioCaptureContext**: Manages microphone capture service
-- **SystemAudioContext**: Manages system audio capture service
-- **TranscriptionContext**: Provides transcription service
-- **TranslationContext**: Provides both translation services
-- **SubjectContext**: Manages subject hierarchy, history, and presentation state
-- **VADContext**: Manages voice activity detection
-- **TranscriptionEventsContext**: Event bus for completed transcriptions
-- **SystemAudioAnalysisContext**: Manages whether system audio influences analysis
-
-### Component Structure
-
-- **MainApplication**: Root component orchestrating all features
-- **WelcomeScreen**: Language selection and configuration
-- **RecordingControlPanel**: Recording controls and status indicators
-- **TranscriptionStream**: Displays transcription cards
-- **TranscriptionCard**: Individual transcription with streaming text and translation
-- **SubjectDisplay**: Displays organized subject hierarchy
-- **SubjectCard**: Individual subject with title, translation, and bullet points
-- **BulletPoint**: Individual bullet point with translation
-- **ErrorDisplay**: User-friendly error messages
+**Language Support**: Currently supports English, Spanish, and Japanese. Language support is constrained by the Gemini Nano model's capabilities, with more languages expected in future updates.
 
 ---
 
-## 🚀 Getting Started
+## ✨ Key Features
+
+### 🎙️ Real-time Transcription
+- **Microphone Audio**: Capture and transcribe speech from your microphone in real-time
+- **System Audio**: Transcribe system audio through the screen share API
+- **Meeting Support**: Use the application during video calls and online meetings to transcribe all participants
+
+### � Intelligent Presentation Editing
+- **Automatic Subject Detection**: Detects changes in conversation topics and organizes them automatically
+- **Smart Bullet Points**: Automatically adds bullet points to your presentation as you speak
+- **Intent Recognition**: Detects when you want to pause or resume the presentation (useful during Q&A sessions)
+- **Configurable Analysis**: Choose whether transcriptions from other parties (system audio) should be included in the presentation, or restrict presentation editing to only the main presenter
+
+### 🌐 Translation
+- **Bidirectional Translation**: Translates transcriptions and bullet points between languages in real-time
+- **Meeting Summary Translation**: Automatically translates the meeting summary to the other party's language
+
+### 💾 Export Capabilities
+- **Download Transcriptions**: Export all transcriptions from the meeting
+- **Download Translations**: Export translated content
+- **Download Presentation**: Export the generated presentation in Markdown format
+- **Meeting Summary**: Get an AI-generated summary when the meeting is finished
+
+### 🎯 Main Use Case
+Share your screen with the FittyFiritti application during meetings to enable the other party to understand what you're saying and follow your thought process in real-time—eliminating the need for a human interpreter.
+
+---
+
+## 🔧 Technical Details
+
+![Application Flow Diagram](docs/main-flow.png)
+
+### Voice Activity Detection (VAD)
+- Powered by **ONNX Runtime**
+- Uses a specialized AI model for accurate speech detection
+
+### Transcription Engine
+- **Multi-modal Gemini Nano AI Model** built into Google Chrome
+- Uses Chrome's **Prompt API** for audio-to-text transcription
+- On-device processing with no external API calls
+
+### Presentation Editor
+- **Intention Detection**: Uses the Prompt API to detect when to add bullet points or change subjects
+- Intelligent context-aware content organization
+
+### Translation System
+- **Translation API**: Chrome's built-in Translation API for bidirectional translation
+- Translates transcriptions, bullet points, and subject titles in real-time
+
+### Meeting Summarization
+- **Summarizer API**: Chrome's built-in Summarizer API
+- Generates concise meeting summaries based on the full transcription
+
+---
+
+## 💡 Value Proposition
+
+### 🔒 Privacy First
+- **100% Local Processing**: Everything runs on your computer
+- **No Internet Required**: Once loaded, the application works offline
+- **No Data Transmission**: Your voice and meeting content never leave your device
+- **No Subscriptions**: Completely free to use—no fees to any provider
+
+### 🚀 Powered by Your Hardware
+- All AI models execute directly on your device
+- No cloud API dependencies
+- Fast, responsive, and private
+
+### 🌐 Web-Based
+- Runs in your browser—no installation required
+- Cross-platform compatibility
+- Easy to share and access
+
+---
+
+## 🏗️ Building the Application
 
 ### Prerequisites
-
-- **Node.js 18+**
-- **PNPM 9.12.3+**
-- **Chrome Browser** (Version 141+ recommended) with Built-in AI enabled
-- **Microphone access** (required for voice capture)
-- **Screen sharing permission** (optional, for system audio capture)
+- Node.js 18+
+- PNPM package manager
 
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/fittyfiritti.git
-cd fittyfiritti
-
 # Install dependencies
 pnpm install
+```
 
-# Build all packages
-pnpm build
+### Build
+
+```bash
+# Build the application
+pnpm run build
 ```
 
 ### Development
 
 ```bash
-# Start development server
+# Run the development server
 pnpm dev
 
-# The app will be available at http://localhost:5173
-```
-
-### Production Build
-
-```bash
-# Build for production
-pnpm build
-
-# The built files will be in apps/web/dist
-```
-
-### Quality Checks
-
-```bash
-# Run all quality checks (lint, format, type-check, build)
-pnpm quality-check
-
-# Individual checks
-pnpm lint
-pnpm format
-pnpm type-check
+# Open http://localhost:5173 in Chrome to see the application
 ```
 
 ---
 
-## 🔧 Chrome AI Setup
+## 🏆 About This Project
 
-This application requires Chrome's Built-in AI API (Gemini Nano) to be enabled.
+This application was created for the **Google Chrome Built-in AI Challenge 2025** and is powered by the **Gemini Nano model** and early access APIs from Google Chrome.
 
-**Required Chrome Flags:**
+### 🤖 AI-Assisted Development
 
-Navigate to `chrome://flags` and enable the following:
-
-1. **Optimization Guide On Device Model** (`#optimization-guide-on-device-model`) → **Enabled BypassPerfRequirement**
-2. **Prompt API for Gemini Nano** (`#prompt-api-for-gemini-nano`) → **Enabled**
-3. **Translation API for Gemini Nano** (`#translation-api`) → **Enabled**
-
-After enabling these flags, restart Chrome. The Gemini Nano model will download automatically on first use.
-
----
-
-## 📖 Usage Guide
-
-### Starting a Session
-
-1. **Launch the Application**: Open the app in Chrome
-2. **Configure Languages**:
-   - Select your language (speaker)
-   - Select other party's language
-   - Toggle system audio analysis (whether other party's speech creates subjects/bullets)
-3. **Click the Microphone Button**: Initializes AI services and starts VAD
-4. **Grant Permissions**: Allow microphone access when prompted
-
-### Recording Your Voice
-
-- **Automatic Detection**: VAD automatically detects when you start and stop speaking
-- **Visual Feedback**: Blue indicator shows when your voice is detected
-- **Transcription Cards**: Each speech segment creates a new card on the left
-- **Subject Analysis**: Your transcriptions influence the subject organization on the right
-
-### Capturing System Audio
-
-1. **Click "Start System Capture"**: Initiates screen sharing
-2. **Select Window/Tab**: Choose the window with audio (e.g., video call)
-3. **Enable Audio**: Make sure "Share system audio" is checked
-4. **Grant Permission**: Allow screen sharing
-5. **System Cards**: System audio transcriptions appear in gray on the left
-
-### Understanding Subject Organization
-
-- **Paused State**: Default state, waiting for "Hey computer, start presentation"
-- **Running State**: Actively analyzing transcriptions and organizing content
-- **Subject Changes**: New topics create new subject cards with AI-generated titles
-- **Bullet Points**: Key information is extracted as bullet points under each subject
-- **Translations**: All content is translated to the configured languages
-
-### Voice Commands
-
-- **"Hey computer, start/begin presentation"**: Resume subject analysis
-- **"Hey computer, pause/stop presentation"**: Pause subject analysis
-
-### Ending a Session
-
-- **Stop Recording**: Click "Stop Recording" to pause microphone capture
-- **Stop System Capture**: Click "Stop System Capture" to end screen sharing
-- **End Session**: Click "End Session" to return to welcome screen and clear all data
-
----
-
-## 🎯 Use Cases
-
-- **📹 Video Call Translation**: Transcribe and translate both sides of a video call in real-time
-- **🎓 Lecture Note-Taking**: Automatically organize lecture content into structured notes
-- **🎤 Presentation Analysis**: Analyze your presentation structure and organization
-- **📝 Interview Transcription**: Capture and organize interview conversations
-- **🌐 Language Learning**: Practice conversations with real-time translation
-- **💼 Meeting Notes**: Automatic meeting minutes with structured topics
-- **🎙️ Podcast Transcription**: Transcribe podcast audio with speaker separation
-- **👥 Multilingual Conversations**: Facilitate conversations between speakers of different languages
-
----
-
-## 🛠️ Technical Details
-
-### Chrome Built-in AI API Integration
-
-- **Language Model API**: Uses global `LanguageModel` interface (not `window.ai`)
-- **Multi-Modal Support**: Audio + text input, text output
-- **Session Management**: Efficient session creation and caching
-- **Structured Output**: JSON schema constraints for reliable parsing
-- **Streaming Responses**: Real-time token streaming for transcription and translation
-- **Translation API**: Uses native `Translator` API with prompt-based fallback
-
-### Audio Processing
-
-- **VAD Library**: `@ricky0123/vad-web` v0.0.27 with ONNX runtime
-- **Sample Rate**: 16kHz (optimized for speech recognition)
-- **Codec**: WebM with Opus audio codec
-- **Audio Format**: Float32Array for VAD, Blob for transcription
-- **Noise Suppression**: Enabled for microphone capture
-- **Echo Cancellation**: Enabled for microphone capture
-
-### Performance Optimizations
-
-- **Parallel Processing**: Multiple transcription cards process simultaneously
-- **Streaming Output**: Token-by-token streaming for immediate feedback
-- **Session Caching**: Efficient AI session reuse (currently disabled, pending fix)
-- **Context Window**: Limited history (10 items) for efficient processing
+This application has been developed with the assistance of artificial intelligence, specifically **GitHub Copilot**. The development workflow and guidelines for AI agents are documented in the [`AGENTS.MD`](AGENTS.MD) file, which describes the rules and best practices for artificial intelligence agents to collaborate on this project.
 
 ---
 
