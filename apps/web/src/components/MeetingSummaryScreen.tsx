@@ -6,7 +6,7 @@ import {
   downloadPresentation,
   downloadTranscriptions,
 } from '../utils/downloadUtils'
-import type { Language } from './WelcomeScreen'
+import type { Language, PresentationMode } from './WelcomeScreen'
 
 interface MeetingSummaryScreenProps {
   summary: string
@@ -14,6 +14,7 @@ interface MeetingSummaryScreenProps {
   otherPartyLanguage: Language
   transcriptionData: CardData[]
   subjectHistory: SubjectHistoryItem[]
+  presentationMode: PresentationMode
   onNewMeeting: () => void
   isGeneratingSummary?: boolean
 }
@@ -24,6 +25,7 @@ export function MeetingSummaryScreen({
   otherPartyLanguage,
   transcriptionData,
   subjectHistory,
+  presentationMode,
   onNewMeeting,
   isGeneratingSummary = false,
 }: MeetingSummaryScreenProps) {
@@ -202,17 +204,19 @@ export function MeetingSummaryScreen({
           <span>Transcriptions</span>
         </button>
 
-        {/* Download Presentation */}
-        <button
-          data-testid="download-presentation-button"
-          onClick={handleDownloadPresentation}
-          disabled={subjectHistory.length === 0}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors shadow-lg hover:shadow-xl disabled:cursor-not-allowed flex-1"
-          title="Presentation"
-        >
-          <Icon icon="mdi:download" className="w-5 h-5" />
-          <span>Presentation</span>
-        </button>
+        {/* Download Presentation - Only show if not in transcription-only mode */}
+        {presentationMode !== 'transcription-only' && (
+          <button
+            data-testid="download-presentation-button"
+            onClick={handleDownloadPresentation}
+            disabled={subjectHistory.length === 0}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors shadow-lg hover:shadow-xl disabled:cursor-not-allowed flex-1"
+            title="Presentation"
+          >
+            <Icon icon="mdi:download" className="w-5 h-5" />
+            <span>Presentation</span>
+          </button>
+        )}
 
         {/* New Meeting Button - No text, just icon */}
         <button

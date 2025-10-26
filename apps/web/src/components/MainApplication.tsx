@@ -19,7 +19,7 @@ import { MeetingSummaryScreen } from './MeetingSummaryScreen'
 import { RecordingControlPanel } from './RecordingControlPanel'
 import { SubjectDisplay } from './SubjectDisplay'
 import { TranscriptionStream } from './TranscriptionStream'
-import { Language, WelcomeScreen } from './WelcomeScreen'
+import { Language, PresentationMode, WelcomeScreen } from './WelcomeScreen'
 
 export function MainApplication() {
   const transcriptionService = useTranscription()
@@ -47,6 +47,8 @@ export function MainApplication() {
   const [speakerLanguage, setSpeakerLanguage] = useState<Language>('english')
   const [otherPartyLanguage, setOtherPartyLanguage] =
     useState<Language>('japanese')
+  const [presentationMode, setPresentationMode] =
+    useState<PresentationMode>('both-speakers')
 
   // Meeting summary state
   const [showMeetingSummary, setShowMeetingSummary] = useState(false)
@@ -89,21 +91,26 @@ export function MainApplication() {
         card => card.id === cardId
       )
 
-      // Only publish for subject analysis if:
-      // - It's a microphone card (always include user speech), OR
-      // - It's a system card AND includeSystemAudioInAnalysis is enabled
-      if (!isSystemCard || includeSystemAudioInAnalysis) {
-        publishTranscription({
-          id: cardId,
-          text: text,
-          timestamp: timestamp,
-        })
+      // Only publish for subject analysis if we're NOT in transcription-only mode
+      // When in transcription-only mode, no transcriptions should trigger subject detection
+      if (presentationMode !== 'transcription-only') {
+        // Only publish for subject analysis if:
+        // - It's a microphone card (always include user speech), OR
+        // - It's a system card AND includeSystemAudioInAnalysis is enabled
+        if (!isSystemCard || includeSystemAudioInAnalysis) {
+          publishTranscription({
+            id: cardId,
+            text: text,
+            timestamp: timestamp,
+          })
+        }
       }
     },
     [
       publishTranscription,
       includeSystemAudioInAnalysis,
       systemTranscriptionCards,
+      presentationMode,
     ]
   )
 
@@ -237,7 +244,7 @@ export function MainApplication() {
   const handleStartRecording = async (
     selectedSpeakerLanguage: Language,
     selectedOtherPartyLanguage: Language,
-    includeSystemAudioInAnalysis: boolean
+    selectedPresentationMode: PresentationMode
   ) => {
     try {
       setIsInitializing(true)
@@ -247,7 +254,14 @@ export function MainApplication() {
       setSpeakerLanguage(selectedSpeakerLanguage)
       setOtherPartyLanguage(selectedOtherPartyLanguage)
 
-      // Set the system audio analysis preference
+      // Set the presentation mode
+      setPresentationMode(selectedPresentationMode)
+
+      // Convert presentation mode to includeSystemAudioInAnalysis:
+      // - 'transcription-only' or 'local-only': false (only local speaker influences presentation)
+      // - 'both-speakers': true (both speakers influence presentation)
+      const includeSystemAudioInAnalysis =
+        selectedPresentationMode === 'both-speakers'
       setIncludeSystemAudioInAnalysis(includeSystemAudioInAnalysis)
 
       // Initialize services
@@ -438,7 +452,11 @@ export function MainApplication() {
 
   // Wrapper for recording control panel (no language params needed)
   const handleStartRecordingWrapper = async () => {
-    return handleStartRecording(speakerLanguage, otherPartyLanguage, true)
+    return handleStartRecording(
+      speakerLanguage,
+      otherPartyLanguage,
+      presentationMode
+    )
   }
 
   // Cleanup services on unmount only
@@ -482,6 +500,7 @@ export function MainApplication() {
           otherPartyLanguage={otherPartyLanguage}
           transcriptionData={transcriptionDataRef.current}
           subjectHistory={subjectHistory}
+          presentationMode={presentationMode}
           onNewMeeting={handleNewMeeting}
           isGeneratingSummary={isGeneratingSummary}
         />
@@ -514,7 +533,11 @@ export function MainApplication() {
             >
               <div
                 data-testid="transcription-column"
-                className="flex-1 min-w-0"
+                className={
+                  presentationMode === 'transcription-only'
+                    ? 'flex-1 min-w-0'
+                    : 'flex-1 min-w-0'
+                }
               >
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
                   <TranscriptionStream
@@ -529,14 +552,16 @@ export function MainApplication() {
                 </div>
               </div>
 
-              <div data-testid="subject-column" className="flex-1 min-w-0">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
-                  <SubjectDisplay
-                    speakerLanguage={speakerLanguage}
-                    otherPartyLanguage={otherPartyLanguage}
-                  />
+              {presentationMode !== 'transcription-only' && (
+                <div data-testid="subject-column" className="flex-1 min-w-0">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
+                    <SubjectDisplay
+                      speakerLanguage={speakerLanguage}
+                      otherPartyLanguage={otherPartyLanguage}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Control Panel - Shrinks to content */}

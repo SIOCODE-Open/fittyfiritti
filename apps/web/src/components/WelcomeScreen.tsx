@@ -3,11 +3,16 @@ import { useState } from 'react'
 
 export type Language = 'english' | 'spanish' | 'japanese'
 
+export type PresentationMode =
+  | 'transcription-only'
+  | 'local-only'
+  | 'both-speakers'
+
 interface WelcomeScreenProps {
   onStartRecording: (
     speakerLanguage: Language,
     otherPartyLanguage: Language,
-    includeSystemAudioInAnalysis: boolean
+    presentationMode: PresentationMode
   ) => void
   isInitializing: boolean
 }
@@ -19,8 +24,8 @@ export function WelcomeScreen({
   const [speakerLanguage, setSpeakerLanguage] = useState<Language>('english')
   const [otherPartyLanguage, setOtherPartyLanguage] =
     useState<Language>('japanese')
-  const [includeSystemAudioInAnalysis, setIncludeSystemAudioInAnalysis] =
-    useState<boolean>(true)
+  const [presentationMode, setPresentationMode] =
+    useState<PresentationMode>('both-speakers')
 
   const languageOptions = [
     { value: 'english', label: 'English' },
@@ -28,12 +33,26 @@ export function WelcomeScreen({
     { value: 'japanese', label: 'Japanese' },
   ]
 
+  const presentationModeOptions = [
+    {
+      value: 'transcription-only' as PresentationMode,
+      label: 'Transcription & Translation Only',
+      description: 'No presentation mode, focus on transcription',
+    },
+    {
+      value: 'local-only' as PresentationMode,
+      label: 'Presentation from Your Speech',
+      description: 'Only your voice creates presentation content',
+    },
+    {
+      value: 'both-speakers' as PresentationMode,
+      label: 'Presentation from Both Speakers',
+      description: 'Both you and the other party influence the presentation',
+    },
+  ]
+
   const handleStartRecording = () => {
-    onStartRecording(
-      speakerLanguage,
-      otherPartyLanguage,
-      includeSystemAudioInAnalysis
-    )
+    onStartRecording(speakerLanguage, otherPartyLanguage, presentationMode)
   }
   return (
     <div
@@ -111,29 +130,38 @@ export function WelcomeScreen({
             </select>
           </div>
 
-          {/* System Audio Analysis Setting */}
-          <div data-testid="system-audio-analysis-section">
-            <label className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                data-testid="include-system-audio-checkbox"
-                checked={includeSystemAudioInAnalysis}
-                onChange={e =>
-                  setIncludeSystemAudioInAnalysis(e.target.checked)
-                }
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                Include other party's speech in analysis
-              </span>
-            </label>
-            <p
-              data-testid="system-audio-analysis-description"
-              className="text-xs text-gray-500 mt-1 ml-7"
+          {/* Presentation Mode */}
+          <div data-testid="presentation-mode-section">
+            <label
+              htmlFor="presentation-mode"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
-              When checked, both your voice and the other party's voice will
-              influence the right-side content organization. When unchecked,
-              only your voice will create title changes and bullet points.
+              Presentation Mode
+            </label>
+            <select
+              id="presentation-mode"
+              data-testid="presentation-mode-select"
+              value={presentationMode}
+              onChange={e =>
+                setPresentationMode(e.target.value as PresentationMode)
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {presentationModeOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p
+              data-testid="presentation-mode-description"
+              className="text-xs text-gray-500 mt-1"
+            >
+              {
+                presentationModeOptions.find(
+                  opt => opt.value === presentationMode
+                )?.description
+              }
             </p>
           </div>
         </div>
