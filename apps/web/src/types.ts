@@ -1,3 +1,9 @@
+// Presentation Mode
+export type PresentationMode =
+  | 'transcription-only'
+  | 'transcription-and-presentation'
+  | 'transcription-presentation-and-other-party'
+
 // Note Structure Types
 export interface TranscriptionCard {
   id: string

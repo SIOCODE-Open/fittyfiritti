@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { PresentationMode } from '../types'
 import { useSubject } from '../contexts/SubjectContext'
 import { useSystemAudioAnalysis } from '../contexts/SystemAudioAnalysisContext'
 import { useSystemAudio } from '../contexts/SystemAudioContext'
@@ -26,8 +27,7 @@ export function MainApplication() {
   const { speakerToOtherPartyService, otherPartyToSpeakerService } =
     useTranslation()
   const { publishTranscription } = useTranscriptionEvents()
-  const { setIncludeSystemAudioInAnalysis, includeSystemAudioInAnalysis } =
-    useSystemAudioAnalysis()
+  const { setIncludeSystemAudioInAnalysis } = useSystemAudioAnalysis()
   const { subjectHistory, resetSubjects } = useSubject()
   const vad = useVAD()
   const systemAudio = useSystemAudio()
@@ -47,6 +47,8 @@ export function MainApplication() {
   const [speakerLanguage, setSpeakerLanguage] = useState<Language>('english')
   const [otherPartyLanguage, setOtherPartyLanguage] =
     useState<Language>('japanese')
+  const [presentationMode, setPresentationMode] =
+    useState<PresentationMode>('transcription-and-presentation')
 
   // Meeting summary state
   const [showMeetingSummary, setShowMeetingSummary] = useState(false)
@@ -89,10 +91,16 @@ export function MainApplication() {
         card => card.id === cardId
       )
 
-      // Only publish for subject analysis if:
-      // - It's a microphone card (always include user speech), OR
-      // - It's a system card AND includeSystemAudioInAnalysis is enabled
-      if (!isSystemCard || includeSystemAudioInAnalysis) {
+      // Only publish for subject analysis based on presentation mode:
+      // - transcription-only: never publish (no presentation)
+      // - transcription-and-presentation: only publish microphone cards
+      // - transcription-presentation-and-other-party: publish both microphone and system cards
+      const shouldPublish =
+        presentationMode !== 'transcription-only' &&
+        (!isSystemCard ||
+          presentationMode === 'transcription-presentation-and-other-party')
+
+      if (shouldPublish) {
         publishTranscription({
           id: cardId,
           text: text,
@@ -102,7 +110,7 @@ export function MainApplication() {
     },
     [
       publishTranscription,
-      includeSystemAudioInAnalysis,
+      presentationMode,
       systemTranscriptionCards,
     ]
   )
@@ -237,7 +245,7 @@ export function MainApplication() {
   const handleStartRecording = async (
     selectedSpeakerLanguage: Language,
     selectedOtherPartyLanguage: Language,
-    includeSystemAudioInAnalysis: boolean
+    selectedPresentationMode: PresentationMode
   ) => {
     try {
       setIsInitializing(true)
@@ -247,7 +255,12 @@ export function MainApplication() {
       setSpeakerLanguage(selectedSpeakerLanguage)
       setOtherPartyLanguage(selectedOtherPartyLanguage)
 
-      // Set the system audio analysis preference
+      // Set the presentation mode
+      setPresentationMode(selectedPresentationMode)
+
+      // Set the system audio analysis preference based on presentation mode
+      const includeSystemAudioInAnalysis =
+        selectedPresentationMode === 'transcription-presentation-and-other-party'
       setIncludeSystemAudioInAnalysis(includeSystemAudioInAnalysis)
 
       // Initialize services
@@ -438,7 +451,11 @@ export function MainApplication() {
 
   // Wrapper for recording control panel (no language params needed)
   const handleStartRecordingWrapper = async () => {
-    return handleStartRecording(speakerLanguage, otherPartyLanguage, true)
+    return handleStartRecording(
+      speakerLanguage,
+      otherPartyLanguage,
+      presentationMode
+    )
   }
 
   // Cleanup services on unmount only
@@ -484,6 +501,7 @@ export function MainApplication() {
           subjectHistory={subjectHistory}
           onNewMeeting={handleNewMeeting}
           isGeneratingSummary={isGeneratingSummary}
+          presentationMode={presentationMode}
         />
       )}
 
@@ -514,7 +532,11 @@ export function MainApplication() {
             >
               <div
                 data-testid="transcription-column"
-                className="flex-1 min-w-0"
+                className={
+                  presentationMode === 'transcription-only'
+                    ? 'flex-1 min-w-0'
+                    : 'flex-1 min-w-0'
+                }
               >
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
                   <TranscriptionStream
@@ -529,14 +551,17 @@ export function MainApplication() {
                 </div>
               </div>
 
-              <div data-testid="subject-column" className="flex-1 min-w-0">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
-                  <SubjectDisplay
-                    speakerLanguage={speakerLanguage}
-                    otherPartyLanguage={otherPartyLanguage}
-                  />
+              {/* Subject Display - Only show if not transcription-only mode */}
+              {presentationMode !== 'transcription-only' && (
+                <div data-testid="subject-column" className="flex-1 min-w-0">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
+                    <SubjectDisplay
+                      speakerLanguage={speakerLanguage}
+                      otherPartyLanguage={otherPartyLanguage}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Control Panel - Shrinks to content */}

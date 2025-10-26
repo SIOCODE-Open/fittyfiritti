@@ -1,6 +1,7 @@
 import { Icon } from '@iconify/react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from '../contexts/TranslationContext'
+import { PresentationMode } from '../types'
 import type { CardData, SubjectHistoryItem } from '../utils/downloadUtils'
 import {
   downloadPresentation,
@@ -16,6 +17,7 @@ interface MeetingSummaryScreenProps {
   subjectHistory: SubjectHistoryItem[]
   onNewMeeting: () => void
   isGeneratingSummary?: boolean
+  presentationMode: PresentationMode
 }
 
 export function MeetingSummaryScreen({
@@ -26,6 +28,7 @@ export function MeetingSummaryScreen({
   subjectHistory,
   onNewMeeting,
   isGeneratingSummary = false,
+  presentationMode,
 }: MeetingSummaryScreenProps) {
   const { speakerToOtherPartyService } = useTranslation()
   const [translatedSummary, setTranslatedSummary] = useState<string>('')
@@ -202,17 +205,19 @@ export function MeetingSummaryScreen({
           <span>Transcriptions</span>
         </button>
 
-        {/* Download Presentation */}
-        <button
-          data-testid="download-presentation-button"
-          onClick={handleDownloadPresentation}
-          disabled={subjectHistory.length === 0}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors shadow-lg hover:shadow-xl disabled:cursor-not-allowed flex-1"
-          title="Presentation"
-        >
-          <Icon icon="mdi:download" className="w-5 h-5" />
-          <span>Presentation</span>
-        </button>
+        {/* Download Presentation - Only show if not transcription-only mode */}
+        {presentationMode !== 'transcription-only' && (
+          <button
+            data-testid="download-presentation-button"
+            onClick={handleDownloadPresentation}
+            disabled={subjectHistory.length === 0}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors shadow-lg hover:shadow-xl disabled:cursor-not-allowed flex-1"
+            title="Presentation"
+          >
+            <Icon icon="mdi:download" className="w-5 h-5" />
+            <span>Presentation</span>
+          </button>
+        )}
 
         {/* New Meeting Button - No text, just icon */}
         <button
