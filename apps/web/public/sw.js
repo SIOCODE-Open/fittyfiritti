@@ -60,6 +60,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip development server requests (Vite dev server, HMR, etc.)
+  // This ensures hot module reloading works properly in development
+  const url = new URL(event.request.url);
+  if (
+    url.hostname === 'localhost' ||
+    url.hostname === '127.0.0.1' ||
+    url.pathname.includes('/@vite/') ||
+    url.pathname.includes('/@fs/') ||
+    url.pathname.includes('/__vite_ping') ||
+    url.search.includes('import') ||
+    url.search.includes('direct')
+  ) {
+    // Let the browser handle these requests normally
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((response) => {
       if (response) {

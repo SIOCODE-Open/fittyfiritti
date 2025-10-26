@@ -4,6 +4,15 @@
  */
 
 export const registerServiceWorker = async (): Promise<void> => {
+  // Skip service worker registration in development mode to avoid caching issues
+  // that interfere with hot module reloading (HMR)
+  if (import.meta.env.DEV) {
+    console.log(
+      'Development mode detected, skipping service worker registration'
+    )
+    return
+  }
+
   if ('serviceWorker' in navigator) {
     try {
       const registration = await navigator.serviceWorker.register('/sw.js', {
