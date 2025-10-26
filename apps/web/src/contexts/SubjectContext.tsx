@@ -35,6 +35,7 @@ export interface SubjectContextValue {
   isPresentationPaused: boolean
   pausePresentation: () => void
   resumePresentation: () => void
+  resetSubjects: () => void
 }
 
 const SubjectContext = createContext<SubjectContextValue | null>(null)
@@ -146,6 +147,14 @@ export function SubjectProvider({ children }: SubjectProviderProps) {
     console.log('▶️ Presentation resumed')
   }, [])
 
+  const resetSubjects = useCallback(() => {
+    setCurrentSubject(null)
+    setSubjectHistory([])
+    setCurrentHistoryIndex(-1)
+    setIsPresentationPaused(true)
+    console.log('🔄 Subjects reset')
+  }, [])
+
   const value: SubjectContextValue = {
     currentSubject,
     changeSubject,
@@ -160,6 +169,7 @@ export function SubjectProvider({ children }: SubjectProviderProps) {
     isPresentationPaused,
     pausePresentation,
     resumePresentation,
+    resetSubjects,
   }
 
   return (

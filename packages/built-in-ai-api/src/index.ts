@@ -373,6 +373,54 @@ declare global {
   const Translator: TranslatorAPI | undefined
 }
 
+// Chrome Summarizer API Types
+export type SummarizerAvailability =
+  | 'available'
+  | 'downloadable'
+  | 'unavailable'
+
+export type SummarizerType = 'key-points' | 'tldr' | 'teaser' | 'headline'
+export type SummarizerFormat = 'markdown' | 'plain-text'
+export type SummarizerLength = 'short' | 'medium' | 'long'
+
+export interface SummarizerOptions {
+  sharedContext?: string
+  type?: SummarizerType
+  format?: SummarizerFormat
+  length?: SummarizerLength
+  expectedInputLanguages?: string[]
+  expectedContextLanguages?: string[]
+  outputLanguage?: string
+  monitor?: (monitor: DownloadMonitor) => void
+}
+
+export interface SummarizeOptions {
+  context?: string
+}
+
+export interface Summarizer {
+  summarize(text: string, options?: SummarizeOptions): Promise<string>
+  summarizeStreaming(
+    text: string,
+    options?: SummarizeOptions
+  ): ReadableStream<string>
+  destroy(): void
+}
+
+// Main Summarizer Interface
+export interface SummarizerAPI {
+  availability(): Promise<SummarizerAvailability>
+  create(options?: SummarizerOptions): Promise<Summarizer>
+}
+
+// Global Summarizer API Declaration
+declare global {
+  interface Window {
+    Summarizer?: SummarizerAPI
+  }
+  const Summarizer: SummarizerAPI | undefined
+}
+
 // Translation API Utility Functions
 export async function checkTranslatorAvailability(): Promise<boolean> {
   if (typeof window === 'undefined' || !window.Translator) {
@@ -527,4 +575,93 @@ export async function translateTextStreaming(
       signal
     )
   }
+}
+
+// Summarizer API Utility Functions
+export async function checkSummarizerAvailability(): Promise<boolean> {
+  if (typeof window === 'undefined' || !window.Summarizer) {
+    return false
+  }
+  return true
+}
+
+export async function getSummarizerAvailability(): Promise<SummarizerAvailability> {
+  if (!checkSummarizerAvailability() || !window.Summarizer) {
+    return 'unavailable'
+  }
+
+  try {
+    return await window.Summarizer.availability()
+  } catch (error) {
+    console.error('Failed to check summarizer availability:', error)
+    return 'unavailable'
+  }
+}
+
+export async function createSummarizer(
+  options?: SummarizerOptions
+): Promise<Summarizer> {
+  if (!window.Summarizer) {
+    throw new AINotSupportedError('Summarizer API is not available')
+  }
+
+  const availability = await window.Summarizer.availability()
+
+  if (availability === 'unavailable') {
+    throw new AIModelUnavailableError('Summarizer is not available')
+  }
+
+  return await window.Summarizer.create(options)
+}
+
+export async function summarizeText(
+  text: string,
+  options?: SummarizerOptions & SummarizeOptions
+): Promise<string> {
+  const { context, ...summarizerOptions } = options || {}
+  const summarizer = await createSummarizer(summarizerOptions)
+
+  try {
+    return await summarizer.summarize(text, { context })
+  } finally {
+    summarizer.destroy()
+  }
+}
+
+export async function summarizeTextStreaming(
+  text: string,
+  options?: SummarizerOptions & SummarizeOptions
+): Promise<ReadableStream<string>> {
+  const { context, ...summarizerOptions } = options || {}
+  const summarizer = await createSummarizer(summarizerOptions)
+
+  const stream = summarizer.summarizeStreaming(text, { context })
+
+  return new ReadableStream({
+    start(controller) {
+      const reader = stream.getReader()
+
+      const pump = async (): Promise<void> => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) {
+              summarizer.destroy()
+              controller.close()
+              break
+            }
+            controller.enqueue(value)
+          }
+        } catch (error) {
+          summarizer.destroy()
+          controller.error(error)
+        }
+      }
+
+      pump()
+    },
+    cancel() {
+      summarizer.destroy()
+    },
+  })
 }

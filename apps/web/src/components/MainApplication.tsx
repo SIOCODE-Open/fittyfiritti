@@ -1,17 +1,21 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSubject } from '../contexts/SubjectContext'
 import { useSystemAudioAnalysis } from '../contexts/SystemAudioAnalysisContext'
 import { useSystemAudio } from '../contexts/SystemAudioContext'
 import { useTranscription } from '../contexts/TranscriptionContext'
 import { useTranscriptionEvents } from '../contexts/TranscriptionEventsContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useVAD } from '../contexts/VADContext'
+import { SummarizationService } from '../services/SummarizationService'
 import {
   AudioChunk,
   SystemTranscriptionCard,
   TranscriptionCard,
 } from '../types'
 import { convertAudioToBlob } from '../utils/audioUtils'
+import type { CardData } from '../utils/downloadUtils'
 import { ErrorDisplay } from './ErrorDisplay'
+import { MeetingSummaryScreen } from './MeetingSummaryScreen'
 import { RecordingControlPanel } from './RecordingControlPanel'
 import { SubjectDisplay } from './SubjectDisplay'
 import { TranscriptionStream } from './TranscriptionStream'
@@ -24,6 +28,7 @@ export function MainApplication() {
   const { publishTranscription } = useTranscriptionEvents()
   const { setIncludeSystemAudioInAnalysis, includeSystemAudioInAnalysis } =
     useSystemAudioAnalysis()
+  const { subjectHistory, resetSubjects } = useSubject()
   const vad = useVAD()
   const systemAudio = useSystemAudio()
 
@@ -43,6 +48,15 @@ export function MainApplication() {
   const [otherPartyLanguage, setOtherPartyLanguage] =
     useState<Language>('japanese')
 
+  // Meeting summary state
+  const [showMeetingSummary, setShowMeetingSummary] = useState(false)
+  const [meetingSummary, setMeetingSummary] = useState<string>('')
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
+
+  // Store transcription data for downloads and summary
+  const transcriptionDataRef = useRef<CardData[]>([])
+  const summarizationServiceRef = useRef<SummarizationService | null>(null)
+
   // Generate unique IDs
   const generateId = useCallback(
     () => Math.random().toString(36).substr(2, 9),
@@ -52,6 +66,24 @@ export function MainApplication() {
   // Callback to handle completed transcriptions for subject detection
   const handleTranscriptionComplete = useCallback(
     (cardId: string, text: string, timestamp: number) => {
+      // Store transcription data for summary
+      const existingIndex = transcriptionDataRef.current.findIndex(
+        d => d.cardId === cardId
+      )
+      if (existingIndex >= 0) {
+        const existing = transcriptionDataRef.current[existingIndex]
+        if (existing) {
+          existing.original = text
+        }
+      } else {
+        transcriptionDataRef.current.push({
+          cardId,
+          timestamp,
+          original: text,
+          translated: '',
+        })
+      }
+
       // Determine if this is a system card by checking if it exists in systemTranscriptionCards
       const isSystemCard = systemTranscriptionCards.some(
         card => card.id === cardId
@@ -77,8 +109,24 @@ export function MainApplication() {
 
   // Callback to handle completed translations (optional, for logging or other purposes)
   const handleTranslationComplete = useCallback(
-    (_cardId: string, _translatedText: string) => {
-      // Translation completed
+    (cardId: string, translatedText: string) => {
+      // Store translation data
+      const existingIndex = transcriptionDataRef.current.findIndex(
+        d => d.cardId === cardId
+      )
+      if (existingIndex >= 0) {
+        const existing = transcriptionDataRef.current[existingIndex]
+        if (existing) {
+          existing.translated = translatedText
+        }
+      } else {
+        transcriptionDataRef.current.push({
+          cardId,
+          timestamp: Date.now(),
+          original: '',
+          translated: translatedText,
+        })
+      }
     },
     []
   )
@@ -278,7 +326,7 @@ export function MainApplication() {
   }
 
   // Handle ending the entire session
-  const handleEndSession = () => {
+  const handleEndSession = async () => {
     try {
       // Stop both recording and system capture
       if (isRecording) {
@@ -290,16 +338,88 @@ export function MainApplication() {
         setIsSystemCapturing(false)
       }
 
-      // Reset to welcome screen
-      setHasStartedRecording(false)
-      setTranscriptionCards([])
-      setSystemTranscriptionCards([])
+      // Show meeting summary screen immediately
+      if (transcriptionDataRef.current.length > 0) {
+        // Show the summary screen immediately (empty summary = loading state)
+        setShowMeetingSummary(true)
+        setIsGeneratingSummary(true)
+
+        // Generate summary in the background
+        try {
+          // Initialize summarization service if not already initialized
+          if (!summarizationServiceRef.current) {
+            summarizationServiceRef.current = new SummarizationService()
+            await summarizationServiceRef.current.initialize()
+          }
+
+          // Extract all transcription texts (sorted by timestamp)
+          const transcriptions = transcriptionDataRef.current
+            .sort((a, b) => a.timestamp - b.timestamp)
+            .map(data => data.original)
+            .filter(text => text.trim().length > 0)
+
+          if (transcriptions.length === 0) {
+            throw new Error('No transcriptions available to summarize')
+          }
+
+          // Generate summary using streaming
+          const stream =
+            await summarizationServiceRef.current.summarizeMeetingStreaming(
+              transcriptions,
+              {
+                expectedInputLanguages: [speakerLanguage.slice(0, 2)],
+                outputLanguage: speakerLanguage.slice(0, 2),
+              }
+            )
+
+          // Accumulate the summary
+          const reader = stream.getReader()
+          let accumulatedSummary = ''
+
+          while (true) {
+            const { done, value } = await reader.read()
+
+            if (done) {
+              break
+            }
+
+            accumulatedSummary += value
+            setMeetingSummary(accumulatedSummary)
+          }
+        } catch (error) {
+          console.error('Failed to generate meeting summary:', error)
+          setError(
+            'Failed to generate meeting summary. Please try again or start a new meeting.'
+          )
+        } finally {
+          setIsGeneratingSummary(false)
+        }
+      } else {
+        // No transcriptions, just reset to welcome screen
+        handleNewMeeting()
+      }
 
       console.log('🛑 Session ended')
     } catch (error) {
       console.error('Failed to end session:', error)
       setError('Failed to end session.')
     }
+  }
+
+  // Handle starting a new meeting
+  const handleNewMeeting = () => {
+    // Reset all state
+    setHasStartedRecording(false)
+    setTranscriptionCards([])
+    setSystemTranscriptionCards([])
+    setShowMeetingSummary(false)
+    setMeetingSummary('')
+    transcriptionDataRef.current = []
+
+    // Reset subject context
+    resetSubjects()
+
+    console.log('🆕 Starting new meeting')
   }
 
   // Wrapper for recording control panel (no language params needed)
@@ -316,75 +436,99 @@ export function MainApplication() {
       const currentTranscriptionService = transcriptionService
       const currentSpeakerToOtherPartyService = speakerToOtherPartyService
       const currentOtherPartyToSpeakerService = otherPartyToSpeakerService
+      const currentSummarizationService = summarizationServiceRef.current
 
       currentVad.pause()
       currentSystemAudio.stop()
       currentTranscriptionService.destroy()
       currentSpeakerToOtherPartyService.destroy()
       currentOtherPartyToSpeakerService.destroy()
+      currentSummarizationService?.destroy()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run on mount/unmount
 
+  // Handle closing error
+  const handleCloseError = useCallback(() => {
+    setError(null)
+  }, [])
+
   return (
     <div className="h-screen flex flex-col bg-gray-50 p-2">
-      <ErrorDisplay error={error} />
+      <ErrorDisplay error={error} onClose={handleCloseError} />
+
+      {/* Meeting Summary Screen */}
+      {showMeetingSummary && (
+        <MeetingSummaryScreen
+          summary={meetingSummary}
+          speakerLanguage={speakerLanguage}
+          otherPartyLanguage={otherPartyLanguage}
+          transcriptionData={transcriptionDataRef.current}
+          subjectHistory={subjectHistory}
+          onNewMeeting={handleNewMeeting}
+          isGeneratingSummary={isGeneratingSummary}
+        />
+      )}
 
       {/* When not recording AND never started recording: Show huge record button in center */}
-      {!isRecording && !hasStartedRecording && !isSystemCapturing && (
-        <div className="flex-1">
-          <WelcomeScreen
-            onStartRecording={handleStartRecording}
-            isInitializing={isInitializing}
-          />
-        </div>
-      )}
-
-      {/* When recording OR has started recording OR system capturing: Show two-column layout */}
-      {(isRecording || hasStartedRecording || isSystemCapturing) && (
-        <div className="flex-1 flex flex-col gap-2 min-h-0">
-          {/* Cards Container - Takes up all available space */}
-          <div className="flex-1 flex gap-2 min-h-0">
-            <div className="flex-1 min-w-0">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
-                <TranscriptionStream
-                  transcriptionCards={transcriptionCards}
-                  systemTranscriptionCards={systemTranscriptionCards}
-                  speakerLanguage={speakerLanguage}
-                  otherPartyLanguage={otherPartyLanguage}
-                  onTranscriptionComplete={handleTranscriptionComplete}
-                  onTranslationComplete={handleTranslationComplete}
-                />
-              </div>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
-                <SubjectDisplay
-                  speakerLanguage={speakerLanguage}
-                  otherPartyLanguage={otherPartyLanguage}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Control Panel - Shrinks to content */}
-          <div className="flex-shrink-0">
-            <RecordingControlPanel
-              isRecording={isRecording}
-              isSystemCapturing={isSystemCapturing}
-              onStartRecording={handleStartRecordingWrapper}
-              onStopRecording={handleStopRecording}
-              onStartSystemCapture={handleStartSystemCapture}
-              onStopSystemCapture={handleStopSystemCapture}
-              onEndSession={handleEndSession}
+      {!showMeetingSummary &&
+        !isRecording &&
+        !hasStartedRecording &&
+        !isSystemCapturing && (
+          <div className="flex-1">
+            <WelcomeScreen
+              onStartRecording={handleStartRecording}
               isInitializing={isInitializing}
-              userSpeaking={vad.userSpeaking}
-              hasSystemAudio={systemAudio.systemSpeaking}
             />
           </div>
-        </div>
-      )}
+        )}
+
+      {/* When recording OR has started recording OR system capturing: Show two-column layout */}
+      {!showMeetingSummary &&
+        (isRecording || hasStartedRecording || isSystemCapturing) && (
+          <div className="flex-1 flex flex-col gap-2 min-h-0">
+            {/* Cards Container - Takes up all available space */}
+            <div className="flex-1 flex gap-2 min-h-0">
+              <div className="flex-1 min-w-0">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
+                  <TranscriptionStream
+                    transcriptionCards={transcriptionCards}
+                    systemTranscriptionCards={systemTranscriptionCards}
+                    speakerLanguage={speakerLanguage}
+                    otherPartyLanguage={otherPartyLanguage}
+                    onTranscriptionComplete={handleTranscriptionComplete}
+                    onTranslationComplete={handleTranslationComplete}
+                  />
+                </div>
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
+                  <SubjectDisplay
+                    speakerLanguage={speakerLanguage}
+                    otherPartyLanguage={otherPartyLanguage}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Control Panel - Shrinks to content */}
+            <div className="flex-shrink-0">
+              <RecordingControlPanel
+                isRecording={isRecording}
+                isSystemCapturing={isSystemCapturing}
+                onStartRecording={handleStartRecordingWrapper}
+                onStopRecording={handleStopRecording}
+                onStartSystemCapture={handleStartSystemCapture}
+                onStopSystemCapture={handleStopSystemCapture}
+                onEndSession={handleEndSession}
+                isInitializing={isInitializing || isGeneratingSummary}
+                userSpeaking={vad.userSpeaking}
+                hasSystemAudio={systemAudio.systemSpeaking}
+              />
+            </div>
+          </div>
+        )}
     </div>
   )
 }
