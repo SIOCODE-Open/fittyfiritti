@@ -15,6 +15,7 @@ import {
 import { convertAudioToBlob } from '../utils/audioUtils'
 import type { CardData } from '../utils/downloadUtils'
 import { ErrorDisplay } from './ErrorDisplay'
+import { HelpPage } from './HelpPage'
 import { MeetingSummaryScreen } from './MeetingSummaryScreen'
 import { RecordingControlPanel } from './RecordingControlPanel'
 import { SubjectDisplay } from './SubjectDisplay'
@@ -54,6 +55,9 @@ export function MainApplication() {
   const [showMeetingSummary, setShowMeetingSummary] = useState(false)
   const [meetingSummary, setMeetingSummary] = useState<string>('')
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
+
+  // Help page state
+  const [showHelpPage, setShowHelpPage] = useState(false)
 
   // Store transcription data for downloads and summary
   const transcriptionDataRef = useRef<CardData[]>([])
@@ -485,12 +489,27 @@ export function MainApplication() {
     setError(null)
   }, [])
 
+  // Handle opening help page
+  const handleOpenHelp = useCallback(() => {
+    setShowHelpPage(true)
+  }, [])
+
+  // Handle closing help page
+  const handleCloseHelp = useCallback(() => {
+    setShowHelpPage(false)
+  }, [])
+
   return (
     <div
       data-testid="main-application"
       className="h-screen flex flex-col bg-gray-50 p-2"
     >
       <ErrorDisplay error={error} onClose={handleCloseError} />
+
+      {/* Help Page */}
+      {showHelpPage && !showMeetingSummary && (
+        <HelpPage onBack={handleCloseHelp} initialTab="setup" />
+      )}
 
       {/* Meeting Summary Screen */}
       {showMeetingSummary && (
@@ -508,6 +527,7 @@ export function MainApplication() {
 
       {/* When not recording AND never started recording: Show huge record button in center */}
       {!showMeetingSummary &&
+        !showHelpPage &&
         !isRecording &&
         !hasStartedRecording &&
         !isSystemCapturing && (
@@ -515,12 +535,14 @@ export function MainApplication() {
             <WelcomeScreen
               onStartRecording={handleStartRecording}
               isInitializing={isInitializing}
+              onOpenHelp={handleOpenHelp}
             />
           </div>
         )}
 
       {/* When recording OR has started recording OR system capturing: Show two-column layout */}
       {!showMeetingSummary &&
+        !showHelpPage &&
         (isRecording || hasStartedRecording || isSystemCapturing) && (
           <div
             data-testid="recording-layout"
