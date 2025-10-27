@@ -51,7 +51,55 @@ Share your screen with the FittyFiritti application during meetings to enable th
 
 ---
 
-## 🔧 Technical Details
+## � Getting Started - Chrome Setup
+
+Before using FittyFiritti, you need to enable Chrome's Built-in AI features and ensure all required components are up to date.
+
+### Prerequisites
+- **Google Chrome 128 or later** (Canary, Dev, or Beta channel recommended for latest AI features)
+- Chrome must be configured with experimental AI flags
+
+### Step 1: Enable Chrome AI Flags
+
+1. Open Chrome and navigate to `chrome://flags`
+2. Search for and enable the following flags:
+   - **Prompt API for Gemini Nano**: `chrome://flags/#prompt-api-for-gemini-nano`
+     - Set to: **Enabled**
+   - **Translation API**: `chrome://flags/#translation-api`
+     - Set to: **Enabled**
+   - **Summarizer API**: `chrome://flags/#summarization-api`
+     - Set to: **Enabled**
+   - **Optimization Guide On Device Model**: `chrome://flags/#optimization-guide-on-device-model`
+     - Set to: **Enabled BypassPerfRequirement**
+3. Click **Relaunch** to restart Chrome with the new settings
+
+### Step 2: Update Chrome Components
+
+1. Navigate to `chrome://components`
+2. Find **Optimization Guide On Device Model** in the component list
+3. Click **Check for update** to download the latest AI model
+4. Wait for all components to update (this may take several minutes)
+5. Verify that the **Optimization Guide On Device Model** shows a recent version
+
+### Step 3: Verify AI Availability
+
+1. Open the FittyFiritti application in Chrome
+2. If the AI is not ready, you'll see a prompt to download the AI model
+3. Click **Download AI Model** and wait for the download to complete
+4. Once ready, you'll see the welcome screen with language settings
+
+### Troubleshooting
+
+- **AI Not Available**: Ensure all Chrome flags are enabled and Chrome has been restarted
+- **Download Failed**: Check your internet connection and try again
+- **Model Not Loading**: Clear Chrome cache and reload the application
+- **Components Not Updating**: Close all Chrome windows and restart Chrome completely
+
+For more detailed setup instructions, click the help button (?) in the application's welcome screen.
+
+---
+
+## �🔧 Technical Details
 
 ![Application Flow Diagram](docs/main-flow.png)
 

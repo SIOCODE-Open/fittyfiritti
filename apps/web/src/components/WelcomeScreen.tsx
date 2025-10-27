@@ -15,11 +15,13 @@ interface WelcomeScreenProps {
     presentationMode: PresentationMode
   ) => void
   isInitializing: boolean
+  onOpenHelp?: () => void
 }
 
 export function WelcomeScreen({
   onStartRecording,
   isInitializing,
+  onOpenHelp,
 }: WelcomeScreenProps) {
   const [speakerLanguage, setSpeakerLanguage] = useState<Language>('english')
   const [otherPartyLanguage, setOtherPartyLanguage] =
@@ -187,6 +189,57 @@ export function WelcomeScreen({
           />
         )}
       </button>
+
+      {/* Bottom Left Buttons */}
+      <div className="fixed bottom-8 left-8 flex gap-3 z-50">
+        {/* Help Button */}
+        {onOpenHelp && (
+          <button
+            data-testid="help-button"
+            onClick={onOpenHelp}
+            className="w-14 h-14 bg-gray-700 hover:bg-gray-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+            title="Help & Setup Guide"
+          >
+            <Icon
+              icon="mdi:help-circle"
+              className="w-8 h-8 group-hover:scale-110 transition-transform"
+            />
+          </button>
+        )}
+
+        {/* GitHub Button */}
+        <a
+          data-testid="github-button"
+          href="https://github.com/SIOCODE-Open/fittyfiritti"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-14 h-14 bg-gray-700 hover:bg-gray-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+          title="View on GitHub"
+        >
+          <Icon
+            icon="mdi:github"
+            className="w-8 h-8 group-hover:scale-110 transition-transform"
+          />
+        </a>
+      </div>
+
+      {/* Created by SIOCODE - Fixed to bottom-right corner */}
+      <div
+        data-testid="siocode-attribution"
+        className="fixed bottom-8 right-8 z-50"
+      >
+        <a
+          href="https://siocode.hu"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+        >
+          <span className="text-sm font-medium">Created by</span>
+          <span className="text-sm font-bold group-hover:underline">
+            SIOCODE
+          </span>
+        </a>
+      </div>
     </div>
   )
 }
