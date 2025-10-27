@@ -129,6 +129,22 @@ pnpm dev
 
 ---
 
+## 🧪 End-to-End Testing
+
+The project includes comprehensive end-to-end tests using Playwright:
+
+- **Test Audio Files**: Generated test audio files in multiple languages (English, Spanish, Japanese) to validate transcription accuracy
+- **Chrome AI Integration**: Playwright configuration includes specific Chrome flags to enable the Prompt API and AI models during test execution
+- **Real Transcription Testing**: Tests verify actual transcription functionality using the multi-modal Gemini Nano model
+- **Automated Quality Assurance**: Tests ensure the application correctly handles various audio inputs and languages
+
+```bash
+# Run end-to-end tests
+pnpm test
+```
+
+---
+
 ## 🏆 About This Project
 
 This application was created for the **Google Chrome Built-in AI Challenge 2025** and is powered by the **Gemini Nano model** and early access APIs from Google Chrome.
