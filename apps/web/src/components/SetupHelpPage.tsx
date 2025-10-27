@@ -71,7 +71,29 @@ export function SetupHelpPage() {
             <p className="text-sm">
               <span className="font-medium text-gray-700">Set to:</span>{' '}
               <span className="bg-green-100 text-green-800 px-2 py-1 rounded font-semibold">
-                Enabled
+                Enabled Multilingual
+              </span>
+            </p>
+          </div>
+
+          {/* Prompt API for Multimodal Input */}
+          <div className="bg-gray-50 rounded p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Icon icon="mdi:robot" className="w-5 h-5 text-blue-600" />
+              <h4 className="font-semibold text-gray-800">
+                Prompt API for Gemini Nano Multimodal Input
+              </h4>
+            </div>
+            <p className="text-sm text-gray-600 mb-2">
+              Navigate to:{' '}
+              <code className="bg-white px-2 py-1 rounded text-xs">
+                chrome://flags/#prompt-api-for-gemini-nano-multimodal-input
+              </code>
+            </p>
+            <p className="text-sm">
+              <span className="font-medium text-gray-700">Set to:</span>{' '}
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded font-semibold">
+                Enabled Multilingual
               </span>
             </p>
           </div>
@@ -96,25 +118,25 @@ export function SetupHelpPage() {
             </p>
           </div>
 
-          {/* Summarizer API */}
+          {/* Summarization API for Gemini Nano */}
           <div className="bg-gray-50 rounded p-4">
             <div className="flex items-center gap-2 mb-2">
               <Icon
                 icon="mdi:format-list-bulleted"
                 className="w-5 h-5 text-orange-600"
               />
-              <h4 className="font-semibold text-gray-800">Summarizer API</h4>
+              <h4 className="font-semibold text-gray-800">Summarization API for Gemini Nano</h4>
             </div>
             <p className="text-sm text-gray-600 mb-2">
               Navigate to:{' '}
               <code className="bg-white px-2 py-1 rounded text-xs">
-                chrome://flags/#summarization-api
+                chrome://flags/#summarization-api-for-gemini-nano
               </code>
             </p>
             <p className="text-sm">
               <span className="font-medium text-gray-700">Set to:</span>{' '}
               <span className="bg-green-100 text-green-800 px-2 py-1 rounded font-semibold">
-                Enabled
+                Enabled Multilingual
               </span>
             </p>
           </div>

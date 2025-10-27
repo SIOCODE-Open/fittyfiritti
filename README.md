@@ -64,11 +64,13 @@ Before using FittyFiritti, you need to enable Chrome's Built-in AI features and 
 1. Open Chrome and navigate to `chrome://flags`
 2. Search for and enable the following flags:
    - **Prompt API for Gemini Nano**: `chrome://flags/#prompt-api-for-gemini-nano`
-     - Set to: **Enabled**
+     - Set to: **Enabled Multilingual**
+   - **Prompt API for Gemini Nano Multimodal Input**: `chrome://flags/#prompt-api-for-gemini-nano-multimodal-input`
+     - Set to: **Enabled Multilingual**
    - **Translation API**: `chrome://flags/#translation-api`
      - Set to: **Enabled**
-   - **Summarizer API**: `chrome://flags/#summarization-api`
-     - Set to: **Enabled**
+   - **Summarization API for Gemini Nano**: `chrome://flags/#summarization-api-for-gemini-nano`
+     - Set to: **Enabled Multilingual**
    - **Optimization Guide On Device Model**: `chrome://flags/#optimization-guide-on-device-model`
      - Set to: **Enabled BypassPerfRequirement**
 3. Click **Relaunch** to restart Chrome with the new settings
