@@ -1,0 +1,26 @@
+# CI/CD pipeline for FittyFiritti
+# Builds the app, zips it, and uploads to Artifact Registry
+# The update script on the server downloads it, and unzips it
+steps:
+  - name: node
+    entrypoint: /bin/sh
+    args:
+      - -c
+      - |
+        npm install --global pnpm
+        pnpm install
+        pnpm build
+        pnpm -F @fittyfiritti/web zip
+  - name: gcr.io/cloud-builders/gcloud
+    args:
+      [
+        "artifacts",
+        "generic",
+        "upload",
+        "--source=apps/web/dist.zip",
+        "--package=fittyfiritti.com",
+        "--version=${TAG_NAME}",
+        "--location=europe",
+        "--repository=siocloud-generic",
+      ]
+logsBucket: "gs://build-logs.cloud.siocode.hu"
