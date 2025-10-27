@@ -11,6 +11,8 @@ import {
   useEffect,
   useState,
 } from 'react'
+import { Icon } from '@iconify/react'
+import { HelpPage } from '../components/HelpPage'
 
 type AIProviderState =
   | 'loading'
@@ -43,6 +45,7 @@ export function AIAvailabilityProvider({
   const [state, setState] = useState<AIProviderState>('loading')
   const [error, setError] = useState<string | null>(null)
   const [downloadProgress, setDownloadProgress] = useState(0)
+  const [showHelpPage, setShowHelpPage] = useState(false)
 
   const preloadVAD = useCallback(async () => {
     try {
@@ -237,6 +240,11 @@ export function AIAvailabilityProvider({
 
   // Error state
   if (state === 'error') {
+    // If help page is open, show it
+    if (showHelpPage) {
+      return <HelpPage onBack={() => setShowHelpPage(false)} initialTab="setup" />
+    }
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center">
         <div className="bg-white rounded-xl p-8 shadow-lg text-center max-w-md">
@@ -265,6 +273,50 @@ export function AIAvailabilityProvider({
           >
             Retry
           </button>
+        </div>
+
+        {/* Bottom Left Buttons */}
+        <div className="fixed bottom-8 left-8 flex gap-3 z-50">
+          {/* Help Button */}
+          <button
+            onClick={() => setShowHelpPage(true)}
+            className="w-14 h-14 bg-gray-700 hover:bg-gray-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+            title="Help & Setup Guide"
+          >
+            <Icon
+              icon="mdi:help-circle"
+              className="w-8 h-8 group-hover:scale-110 transition-transform"
+            />
+          </button>
+
+          {/* GitHub Button */}
+          <a
+            href="https://github.com/SIOCODE-Open/fittyfiritti"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-14 h-14 bg-gray-700 hover:bg-gray-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+            title="View on GitHub"
+          >
+            <Icon
+              icon="mdi:github"
+              className="w-8 h-8 group-hover:scale-110 transition-transform"
+            />
+          </a>
+        </div>
+
+        {/* Created by SIOCODE - Fixed to bottom-right corner */}
+        <div className="fixed bottom-8 right-8 z-50">
+          <a
+            href="https://siocode.hu"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+          >
+            <span className="text-sm font-medium">Created by</span>
+            <span className="text-sm font-bold group-hover:underline">
+              SIOCODE
+            </span>
+          </a>
         </div>
       </div>
     )
