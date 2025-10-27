@@ -161,16 +161,19 @@ export function TranscriptionStream({
       {/* Header with Export Button */}
       <div
         data-testid="transcription-stream-header"
-        className="flex justify-end p-2 border-b border-gray-200"
+        className="flex justify-end p-2 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300"
       >
         <button
           data-testid="export-transcriptions-button"
           onClick={handleExport}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           title="Export transcriptions"
           aria-label="Export transcriptions"
         >
-          <Icon icon="mdi:download" className="w-5 h-5 text-gray-600" />
+          <Icon
+            icon="mdi:download"
+            className="w-5 h-5 text-gray-600 dark:text-gray-300"
+          />
         </button>
       </div>
 
@@ -187,7 +190,7 @@ export function TranscriptionStream({
             <div className="text-center p-8">
               <Icon
                 icon="mdi:microphone-outline"
-                className="w-16 h-16 text-gray-400 mx-auto"
+                className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto"
               />
             </div>
           </div>

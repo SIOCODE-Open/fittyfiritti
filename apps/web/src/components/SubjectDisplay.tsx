@@ -247,7 +247,7 @@ export function SubjectDisplay({
       {/* Unified Header with Status, Navigation, and Export */}
       <div
         data-testid="subject-display-header"
-        className="flex justify-between items-center p-2 border-b border-gray-200 bg-gray-50"
+        className="flex justify-between items-center p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 transition-colors duration-300"
       >
         {/* Left: Status Icon + Navigation */}
         <div
@@ -262,7 +262,7 @@ export function SubjectDisplay({
             >
               <Icon
                 icon="mdi:pause-circle"
-                className="w-6 h-6 text-amber-600"
+                className="w-6 h-6 text-amber-600 dark:text-amber-500"
               />
             </div>
           ) : (
@@ -270,7 +270,10 @@ export function SubjectDisplay({
               data-testid="presentation-running-indicator"
               title="Presentation Running"
             >
-              <Icon icon="mdi:play-circle" className="w-6 h-6 text-green-600" />
+              <Icon
+                icon="mdi:play-circle"
+                className="w-6 h-6 text-green-600 dark:text-green-500"
+              />
             </div>
           )}
 
@@ -284,31 +287,31 @@ export function SubjectDisplay({
                 data-testid="subject-previous-button"
                 onClick={handlePrevious}
                 disabled={!canNavigatePrevious}
-                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Previous subject"
                 aria-label="Previous subject"
               >
                 <Icon
                   icon="mdi:chevron-left"
-                  className="w-5 h-5 text-gray-600"
+                  className="w-5 h-5 text-gray-600 dark:text-gray-300"
                 />
               </button>
               <button
                 data-testid="subject-next-button"
                 onClick={handleNext}
                 disabled={!canNavigateNext}
-                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Next subject"
                 aria-label="Next subject"
               >
                 <Icon
                   icon="mdi:chevron-right"
-                  className="w-5 h-5 text-gray-600"
+                  className="w-5 h-5 text-gray-600 dark:text-gray-300"
                 />
               </button>
               <div
                 data-testid="subject-navigation-counter"
-                className="flex items-center px-2 text-sm text-gray-600"
+                className="flex items-center px-2 text-sm text-gray-600 dark:text-gray-300 transition-colors duration-300"
               >
                 {currentHistoryIndex + 1} / {subjectHistory.length}
               </div>
@@ -321,11 +324,14 @@ export function SubjectDisplay({
           data-testid="export-subjects-button"
           onClick={handleExportMarkdown}
           disabled={subjectHistory.length === 0}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           title="Export all subjects as markdown"
           aria-label="Export all subjects as markdown"
         >
-          <Icon icon="mdi:download" className="w-5 h-5 text-gray-600" />
+          <Icon
+            icon="mdi:download"
+            className="w-5 h-5 text-gray-600 dark:text-gray-300"
+          />
         </button>
       </div>
 
@@ -347,9 +353,9 @@ export function SubjectDisplay({
         {isAnalyzing && (
           <div
             data-testid="subject-analyzing-indicator"
-            className="mb-4 flex items-center gap-2 text-sm text-blue-600"
+            className="mb-4 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 transition-colors duration-300"
           >
-            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-4 h-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
 
@@ -361,7 +367,10 @@ export function SubjectDisplay({
           >
             <div className="text-center p-8">
               <div className="text-6xl mb-4">
-                <Icon icon="mdi:brain" className="w-12 h-12 text-gray-400" />
+                <Icon
+                  icon="mdi:brain"
+                  className="w-12 h-12 text-gray-400 dark:text-gray-500"
+                />
               </div>
             </div>
           </div>

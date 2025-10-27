@@ -112,16 +112,16 @@ export const SubjectCard = ({
         <div className="flex items-center gap-2 mb-4">
           <h2
             data-testid="subject-title-text"
-            className="text-3xl font-bold text-gray-800"
+            className="text-3xl font-bold text-gray-800 dark:text-gray-100 transition-colors duration-300"
           >
             {subject.title}
           </h2>
           {needsTranslation && isTranslating && (
             <div
               data-testid="subject-title-translating"
-              className="flex items-center gap-1 text-xs text-blue-600"
+              className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 transition-colors duration-300"
             >
-              <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-3 h-3 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin"></div>
               <span>Translating...</span>
             </div>
           )}
@@ -130,11 +130,11 @@ export const SubjectCard = ({
         {needsTranslation && titleJa && (
           <h3
             data-testid="subject-title-translated"
-            className="text-3xl text-gray-800 mb-4"
+            className="text-3xl text-gray-800 dark:text-gray-100 mb-4 transition-colors duration-300"
           >
             {titleJa}
             {isTranslating && (
-              <span className="inline-block w-2 h-8 bg-blue-600 ml-2 animate-pulse"></span>
+              <span className="inline-block w-2 h-8 bg-blue-600 dark:bg-blue-400 ml-2 animate-pulse"></span>
             )}
           </h3>
         )}
@@ -145,7 +145,7 @@ export const SubjectCard = ({
         {bulletPoints.length === 0 && (
           <div
             data-testid="subject-bullet-points-placeholder"
-            className="text-lg text-gray-500 italic p-4 border-2 border-dashed border-gray-200 rounded-lg text-center"
+            className="text-lg text-gray-500 dark:text-gray-400 italic p-4 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg text-center transition-colors duration-300"
           >
             Bullet points will appear here as you speak...
           </div>

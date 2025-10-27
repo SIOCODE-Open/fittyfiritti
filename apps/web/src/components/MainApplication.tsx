@@ -502,7 +502,7 @@ export function MainApplication() {
   return (
     <div
       data-testid="main-application"
-      className="h-screen flex flex-col bg-gray-50 p-2"
+      className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 p-2 transition-colors duration-300"
     >
       <ErrorDisplay error={error} onClose={handleCloseError} />
 
@@ -561,7 +561,7 @@ export function MainApplication() {
                     : 'flex-1 min-w-0'
                 }
               >
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 h-full transition-colors duration-300">
                   <TranscriptionStream
                     transcriptionCards={transcriptionCards}
                     systemTranscriptionCards={systemTranscriptionCards}
@@ -576,7 +576,7 @@ export function MainApplication() {
 
               {presentationMode !== 'transcription-only' && (
                 <div data-testid="subject-column" className="flex-1 min-w-0">
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-full">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 h-full transition-colors duration-300">
                     <SubjectDisplay
                       speakerLanguage={speakerLanguage}
                       otherPartyLanguage={otherPartyLanguage}

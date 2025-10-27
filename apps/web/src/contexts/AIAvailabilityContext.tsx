@@ -3,6 +3,7 @@ import {
   checkLanguageModelAvailability,
   createLanguageModelSession,
 } from '@fittyfiritti/built-in-ai-api'
+import { Icon } from '@iconify/react'
 import {
   createContext,
   ReactNode,
@@ -11,8 +12,8 @@ import {
   useEffect,
   useState,
 } from 'react'
-import { Icon } from '@iconify/react'
 import { HelpPage } from '../components/HelpPage'
+import { ThemeToggleButton } from '../components/ThemeToggleButton'
 
 type AIProviderState =
   | 'loading'
@@ -229,10 +230,12 @@ export function AIAvailabilityProvider({
   // Loading state
   if (state === 'loading') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-colors duration-300">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg text-center transition-colors duration-300">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking AI availability...</p>
+          <p className="text-gray-600 dark:text-gray-300 transition-colors duration-300">
+            Checking AI availability...
+          </p>
         </div>
       </div>
     )
@@ -242,15 +245,17 @@ export function AIAvailabilityProvider({
   if (state === 'error') {
     // If help page is open, show it
     if (showHelpPage) {
-      return <HelpPage onBack={() => setShowHelpPage(false)} initialTab="setup" />
+      return (
+        <HelpPage onBack={() => setShowHelpPage(false)} initialTab="setup" />
+      )
     }
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center">
-        <div className="bg-white rounded-xl p-8 shadow-lg text-center max-w-md">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-colors duration-300">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg text-center max-w-md transition-colors duration-300">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors duration-300">
             <svg
-              className="w-8 h-8 text-red-600"
+              className="w-8 h-8 text-red-600 dark:text-red-400 transition-colors duration-300"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -263,10 +268,12 @@ export function AIAvailabilityProvider({
               />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 transition-colors duration-300">
             AI Not Available
           </h2>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-gray-600 dark:text-gray-300 mb-4 transition-colors duration-300">
+            {error}
+          </p>
           <button
             onClick={retry}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
@@ -277,10 +284,13 @@ export function AIAvailabilityProvider({
 
         {/* Bottom Left Buttons */}
         <div className="fixed bottom-8 left-8 flex gap-3 z-50">
+          {/* Theme Toggle Button */}
+          <ThemeToggleButton />
+
           {/* Help Button */}
           <button
             onClick={() => setShowHelpPage(true)}
-            className="w-14 h-14 bg-gray-700 hover:bg-gray-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+            className="w-14 h-14 bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
             title="Help & Setup Guide"
           >
             <Icon
@@ -294,7 +304,7 @@ export function AIAvailabilityProvider({
             href="https://github.com/SIOCODE-Open/fittyfiritti"
             target="_blank"
             rel="noopener noreferrer"
-            className="w-14 h-14 bg-gray-700 hover:bg-gray-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+            className="w-14 h-14 bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
             title="View on GitHub"
           >
             <Icon
@@ -310,7 +320,7 @@ export function AIAvailabilityProvider({
             href="https://siocode.hu"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors duration-300 group"
           >
             <span className="text-sm font-medium">Created by</span>
             <span className="text-sm font-bold group-hover:underline">
@@ -325,11 +335,11 @@ export function AIAvailabilityProvider({
   // Downloadable state
   if (state === 'downloadable') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-xl p-8 shadow-lg text-center max-w-md">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-colors duration-300">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg text-center max-w-md transition-colors duration-300">
+          <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors duration-300">
             <svg
-              className="w-8 h-8 text-blue-600"
+              className="w-8 h-8 text-blue-600 dark:text-blue-400 transition-colors duration-300"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -342,10 +352,10 @@ export function AIAvailabilityProvider({
               />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 transition-colors duration-300">
             Download AI Model
           </h2>
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-600 dark:text-gray-300 mb-6 transition-colors duration-300">
             The AI model needs to be downloaded first to use this application.
             This is a one-time process.
           </p>
@@ -363,11 +373,11 @@ export function AIAvailabilityProvider({
   // Downloading state
   if (state === 'downloading') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-xl p-8 shadow-lg text-center max-w-md">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-colors duration-300">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg text-center max-w-md transition-colors duration-300">
+          <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors duration-300">
             <svg
-              className="w-8 h-8 text-blue-600 animate-bounce"
+              className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-bounce transition-colors duration-300"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -380,21 +390,21 @@ export function AIAvailabilityProvider({
               />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 transition-colors duration-300">
             Downloading AI Model
           </h2>
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-600 dark:text-gray-300 mb-6 transition-colors duration-300">
             Please wait while the AI model is being downloaded...
           </p>
 
           {/* Progress bar */}
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-4 transition-colors duration-300">
             <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${downloadProgress * 100}%` }}
             ></div>
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
             {Math.round(downloadProgress * 100)}% complete
           </p>
         </div>
@@ -405,10 +415,12 @@ export function AIAvailabilityProvider({
   // Loading model state
   if (state === 'loading-model') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-colors duration-300">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg text-center transition-colors duration-300">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Initializing AI model...</p>
+          <p className="text-gray-600 dark:text-gray-300 transition-colors duration-300">
+            Initializing AI model...
+          </p>
         </div>
       </div>
     )
@@ -417,10 +429,12 @@ export function AIAvailabilityProvider({
   // Loading VAD state
   if (state === 'loading-vad') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-colors duration-300">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg text-center transition-colors duration-300">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading voice detection...</p>
+          <p className="text-gray-600 dark:text-gray-300 transition-colors duration-300">
+            Loading voice detection...
+          </p>
         </div>
       </div>
     )

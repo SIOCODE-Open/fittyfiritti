@@ -1,5 +1,6 @@
 import { Icon } from '@iconify/react'
 import { useState } from 'react'
+import { ThemeToggleButton } from './ThemeToggleButton'
 
 export type Language = 'english' | 'spanish' | 'japanese'
 
@@ -59,7 +60,7 @@ export function WelcomeScreen({
   return (
     <div
       data-testid="welcome-screen"
-      className="flex flex-col items-center justify-center min-h-screen"
+      className="flex flex-col items-center justify-center min-h-screen transition-colors duration-300"
     >
       {/* Logo */}
       <div
@@ -74,7 +75,7 @@ export function WelcomeScreen({
         />
         <h1
           data-testid="welcome-title"
-          className="text-6xl font-bold text-gray-900 mb-4"
+          className="text-6xl font-bold text-gray-900 dark:text-gray-100 mb-4 transition-colors duration-300"
         >
           FittyFiritti
         </h1>
@@ -83,14 +84,14 @@ export function WelcomeScreen({
       {/* Language Settings */}
       <div
         data-testid="language-settings-panel"
-        className="bg-white p-8 rounded-xl shadow-lg border border-gray-200 mb-12 w-full max-w-md"
+        className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mb-12 w-full max-w-md transition-colors duration-300"
       >
         <div className="space-y-6">
           {/* Speaker Language */}
           <div data-testid="speaker-language-section">
             <label
               htmlFor="speaker-language"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300"
             >
               Your Language (Speaker)
             </label>
@@ -99,7 +100,7 @@ export function WelcomeScreen({
               data-testid="speaker-language-select"
               value={speakerLanguage}
               onChange={e => setSpeakerLanguage(e.target.value as Language)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors duration-300"
             >
               {languageOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -113,7 +114,7 @@ export function WelcomeScreen({
           <div data-testid="other-party-language-section">
             <label
               htmlFor="other-party-language"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300"
             >
               Other Party Language
             </label>
@@ -122,7 +123,7 @@ export function WelcomeScreen({
               data-testid="other-party-language-select"
               value={otherPartyLanguage}
               onChange={e => setOtherPartyLanguage(e.target.value as Language)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors duration-300"
             >
               {languageOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -136,7 +137,7 @@ export function WelcomeScreen({
           <div data-testid="presentation-mode-section">
             <label
               htmlFor="presentation-mode"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300"
             >
               Presentation Mode
             </label>
@@ -147,7 +148,7 @@ export function WelcomeScreen({
               onChange={e =>
                 setPresentationMode(e.target.value as PresentationMode)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors duration-300"
             >
               {presentationModeOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -157,7 +158,7 @@ export function WelcomeScreen({
             </select>
             <p
               data-testid="presentation-mode-description"
-              className="text-xs text-gray-500 mt-1"
+              className="text-xs text-gray-500 dark:text-gray-400 mt-1 transition-colors duration-300"
             >
               {
                 presentationModeOptions.find(
@@ -192,12 +193,15 @@ export function WelcomeScreen({
 
       {/* Bottom Left Buttons */}
       <div className="fixed bottom-8 left-8 flex gap-3 z-50">
+        {/* Theme Toggle Button */}
+        <ThemeToggleButton />
+
         {/* Help Button */}
         {onOpenHelp && (
           <button
             data-testid="help-button"
             onClick={onOpenHelp}
-            className="w-14 h-14 bg-gray-700 hover:bg-gray-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+            className="w-14 h-14 bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
             title="Help & Setup Guide"
           >
             <Icon
@@ -213,7 +217,7 @@ export function WelcomeScreen({
           href="https://github.com/SIOCODE-Open/fittyfiritti"
           target="_blank"
           rel="noopener noreferrer"
-          className="w-14 h-14 bg-gray-700 hover:bg-gray-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+          className="w-14 h-14 bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
           title="View on GitHub"
         >
           <Icon
@@ -232,7 +236,7 @@ export function WelcomeScreen({
           href="https://siocode.hu"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors duration-300 group"
         >
           <span className="text-sm font-medium">Created by</span>
           <span className="text-sm font-bold group-hover:underline">

@@ -4,6 +4,7 @@ import { AudioCaptureProvider } from './contexts/AudioCaptureContext'
 import { SubjectProvider } from './contexts/SubjectContext'
 import { SystemAudioAnalysisProvider } from './contexts/SystemAudioAnalysisContext'
 import { SystemAudioProvider } from './contexts/SystemAudioContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 import { TranscriptionProvider } from './contexts/TranscriptionContext'
 import { TranscriptionEventsProvider } from './contexts/TranscriptionEventsContext'
 import { TranslationProvider } from './contexts/TranslationContext'
@@ -11,30 +12,32 @@ import { VADProvider } from './contexts/VADContext'
 
 function App() {
   return (
-    <div
-      data-testid="app-container"
-      className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100"
-    >
-      <AIAvailabilityProvider>
-        <VADProvider>
-          <SystemAudioProvider>
-            <AudioCaptureProvider>
-              <TranscriptionProvider>
-                <TranslationProvider>
-                  <TranscriptionEventsProvider>
-                    <SystemAudioAnalysisProvider>
-                      <SubjectProvider>
-                        <MainApplication />
-                      </SubjectProvider>
-                    </SystemAudioAnalysisProvider>
-                  </TranscriptionEventsProvider>
-                </TranslationProvider>
-              </TranscriptionProvider>
-            </AudioCaptureProvider>
-          </SystemAudioProvider>
-        </VADProvider>
-      </AIAvailabilityProvider>
-    </div>
+    <ThemeProvider>
+      <div
+        data-testid="app-container"
+        className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300"
+      >
+        <AIAvailabilityProvider>
+          <VADProvider>
+            <SystemAudioProvider>
+              <AudioCaptureProvider>
+                <TranscriptionProvider>
+                  <TranslationProvider>
+                    <TranscriptionEventsProvider>
+                      <SystemAudioAnalysisProvider>
+                        <SubjectProvider>
+                          <MainApplication />
+                        </SubjectProvider>
+                      </SystemAudioAnalysisProvider>
+                    </TranscriptionEventsProvider>
+                  </TranslationProvider>
+                </TranscriptionProvider>
+              </AudioCaptureProvider>
+            </SystemAudioProvider>
+          </VADProvider>
+        </AIAvailabilityProvider>
+      </div>
+    </ThemeProvider>
   )
 }
 

@@ -154,10 +154,10 @@ export function TranscriptionCard({
   return (
     <div
       data-testid={`transcription-card-${card.type}`}
-      className={`rounded-xl p-6 shadow-lg border-2 ${
+      className={`rounded-xl p-6 shadow-lg border-2 transition-colors duration-300 ${
         card.type === 'microphone'
-          ? 'bg-green-800 text-white border-green-600'
-          : 'bg-blue-600 text-white border-blue-400'
+          ? 'bg-green-800 dark:bg-green-900 text-white border-green-600 dark:border-green-700'
+          : 'bg-blue-600 dark:bg-blue-700 text-white border-blue-400 dark:border-blue-500'
       }`}
     >
       {/* Transcription Content */}

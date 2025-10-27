@@ -14,29 +14,31 @@ export function HelpPage({ onBack, initialTab = 'setup' }: HelpPageProps) {
   return (
     <div
       data-testid="help-page"
-      className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100"
+      className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300"
     >
       {/* Header with Back Button */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 data-testid="help-back-button"
                 onClick={onBack}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
               >
                 <Icon icon="mdi:arrow-left" className="w-6 h-6" />
                 <span className="font-medium">Back</span>
               </button>
-              <div className="h-6 w-px bg-gray-300"></div>
-              <h1 className="text-2xl font-bold text-gray-900">Help Center</h1>
+              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">
+                Help Center
+              </h1>
             </div>
 
             {/* Logo */}
             <div className="flex items-center gap-2">
               <img src="/logo.png" alt="FittyFiritti" className="w-10 h-10" />
-              <span className="font-bold text-gray-900 text-lg">
+              <span className="font-bold text-gray-900 dark:text-gray-100 text-lg transition-colors duration-300">
                 FittyFiritti
               </span>
             </div>
@@ -50,7 +52,7 @@ export function HelpPage({ onBack, initialTab = 'setup' }: HelpPageProps) {
               className={`px-6 py-3 font-semibold rounded-t-lg transition-all ${
                 activeTab === 'setup'
                   ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
               <div className="flex items-center gap-2">
@@ -65,7 +67,7 @@ export function HelpPage({ onBack, initialTab = 'setup' }: HelpPageProps) {
               className={`px-6 py-3 font-semibold rounded-t-lg transition-all ${
                 activeTab === 'features'
                   ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
               <div className="flex items-center gap-2">
@@ -86,15 +88,15 @@ export function HelpPage({ onBack, initialTab = 'setup' }: HelpPageProps) {
       </div>
 
       {/* Footer */}
-      <div className="bg-white border-t border-gray-200 py-4">
-        <div className="max-w-6xl mx-auto px-6 text-center text-sm text-gray-600">
+      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-4 transition-colors duration-300">
+        <div className="max-w-6xl mx-auto px-6 text-center text-sm text-gray-600 dark:text-gray-300 transition-colors duration-300">
           <p>
             Built with ❤️ using Chrome's Built-in AI API (Gemini Nano) •{' '}
             <a
               href="https://fittyfiritti.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
+              className="text-blue-600 dark:text-blue-400 hover:underline"
             >
               fittyfiritti.com
             </a>

@@ -99,33 +99,33 @@ export function BulletPoint({
   return (
     <div
       data-testid="bullet-point"
-      className="mb-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100"
+      className="mb-4 p-4 bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-100 dark:border-gray-600 transition-colors duration-300"
     >
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <p
             data-testid="bullet-point-text"
-            className="text-gray-800 text-xl leading-relaxed mb-3"
+            className="text-gray-800 dark:text-gray-100 text-xl leading-relaxed mb-3 transition-colors duration-300"
           >
             {bulletPoint.text}
           </p>
           {needsTranslation && isTranslating && (
             <div
               data-testid="bullet-point-translating"
-              className="mb-3 flex items-center gap-2 text-sm text-blue-600"
+              className="mb-3 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 transition-colors duration-300"
             >
-              <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-3 h-3 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin"></div>
               <span>Translating...</span>
             </div>
           )}
           {needsTranslation && textJa && (
             <p
               data-testid="bullet-point-translated-text"
-              className="text-gray-800 text-xl leading-relaxed border-t border-gray-100 pt-3"
+              className="text-gray-800 dark:text-gray-100 text-xl leading-relaxed border-t border-gray-100 dark:border-gray-600 pt-3 transition-colors duration-300"
             >
               {textJa}
               {isTranslating && (
-                <span className="inline-block w-2 h-6 bg-blue-600 ml-1 animate-pulse"></span>
+                <span className="inline-block w-2 h-6 bg-blue-600 dark:bg-blue-400 ml-1 animate-pulse"></span>
               )}
             </p>
           )}

@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* stylelint-disable-next-line */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Japanese font styling */
 .font-japanese {
   font-family:
@@ -33,13 +36,25 @@
   border-radius: 3px;
 }
 
+.dark ::-webkit-scrollbar-track {
+  background: #374151;
+}
+
 ::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 3px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #6b7280;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
 /* Focus ring styling */
