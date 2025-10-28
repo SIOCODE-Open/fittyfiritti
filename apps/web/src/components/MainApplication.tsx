@@ -6,6 +6,7 @@ import { useTranscription } from '../contexts/TranscriptionContext'
 import { useTranscriptionEvents } from '../contexts/TranscriptionEventsContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useVAD } from '../contexts/VADContext'
+import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut'
 import { SummarizationService } from '../services/SummarizationService'
 import {
   AudioChunk,
@@ -499,10 +500,25 @@ export function MainApplication() {
     setShowHelpPage(false)
   }, [])
 
+  // Keyboard shortcuts for help page and close modal
+  useKeyboardShortcut(
+    'OPEN_HELP',
+    handleOpenHelp,
+    !showHelpPage && !showMeetingSummary
+  )
+  useKeyboardShortcut('CLOSE_MODAL', () => {
+    if (showHelpPage) {
+      handleCloseHelp()
+    } else if (showMeetingSummary) {
+      handleNewMeeting()
+    }
+  })
+
   return (
     <div
       data-testid="main-application"
       className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 p-2 transition-colors duration-300"
+      role="main"
     >
       <ErrorDisplay error={error} onClose={handleCloseError} />
 

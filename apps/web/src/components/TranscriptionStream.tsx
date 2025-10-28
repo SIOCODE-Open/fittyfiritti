@@ -157,7 +157,12 @@ export function TranscriptionStream({
   }
 
   return (
-    <div data-testid="transcription-stream" className="h-full flex flex-col">
+    <div
+      data-testid="transcription-stream"
+      className="h-full flex flex-col"
+      role="region"
+      aria-label="Transcription and translation stream"
+    >
       {/* Header with Export Button */}
       <div
         data-testid="transcription-stream-header"
@@ -168,11 +173,12 @@ export function TranscriptionStream({
           onClick={handleExport}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           title="Export transcriptions"
-          aria-label="Export transcriptions"
+          aria-label="Export transcriptions to text file - Keyboard shortcut: Ctrl+D"
         >
           <Icon
             icon="mdi:download"
             className="w-5 h-5 text-gray-600 dark:text-gray-300"
+            aria-hidden="true"
           />
         </button>
       </div>
@@ -181,17 +187,23 @@ export function TranscriptionStream({
       <div
         data-testid="transcription-cards-container"
         className="flex-1 overflow-y-auto p-4 space-y-4"
+        role="log"
+        aria-live="polite"
+        aria-label="Transcription messages"
       >
         {unifiedCards.length === 0 ? (
           <div
             data-testid="no-transcriptions-placeholder"
             className="h-full flex items-center justify-center"
+            role="status"
           >
             <div className="text-center p-8">
               <Icon
                 icon="mdi:microphone-outline"
                 className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto"
+                aria-hidden="true"
               />
+              <p className="sr-only">No transcriptions yet</p>
             </div>
           </div>
         ) : (

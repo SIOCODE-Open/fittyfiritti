@@ -100,6 +100,7 @@ export function BulletPoint({
     <div
       data-testid="bullet-point"
       className="mb-4 p-4 bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-100 dark:border-gray-600 transition-colors duration-300"
+      role="listitem"
     >
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
@@ -113,6 +114,9 @@ export function BulletPoint({
             <div
               data-testid="bullet-point-translating"
               className="mb-3 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 transition-colors duration-300"
+              role="status"
+              aria-live="polite"
+              aria-label="Translating bullet point"
             >
               <div className="w-3 h-3 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin"></div>
               <span>Translating...</span>
@@ -122,6 +126,7 @@ export function BulletPoint({
             <p
               data-testid="bullet-point-translated-text"
               className="text-gray-800 dark:text-gray-100 text-xl leading-relaxed border-t border-gray-100 dark:border-gray-600 pt-3 transition-colors duration-300"
+              lang="ja"
             >
               {textJa}
               {isTranslating && (

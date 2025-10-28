@@ -106,7 +106,12 @@ export const SubjectCard = ({
   ])
 
   return (
-    <div data-testid="subject-card" className="mb-6">
+    <div
+      data-testid="subject-card"
+      className="mb-6"
+      role="article"
+      aria-label="Current subject"
+    >
       {/* Subject Title */}
       <div data-testid="subject-title-section" className="mb-6">
         <div className="flex items-center gap-2 mb-4">
@@ -120,6 +125,9 @@ export const SubjectCard = ({
             <div
               data-testid="subject-title-translating"
               className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 transition-colors duration-300"
+              role="status"
+              aria-live="polite"
+              aria-label="Translating subject title"
             >
               <div className="w-3 h-3 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin"></div>
               <span>Translating...</span>
@@ -131,6 +139,7 @@ export const SubjectCard = ({
           <h3
             data-testid="subject-title-translated"
             className="text-3xl text-gray-800 dark:text-gray-100 mb-4 transition-colors duration-300"
+            lang="ja"
           >
             {titleJa}
             {isTranslating && (
@@ -141,11 +150,17 @@ export const SubjectCard = ({
       </div>
 
       {/* Bullet Points */}
-      <div data-testid="subject-bullet-points" className="space-y-3">
+      <div
+        data-testid="subject-bullet-points"
+        className="space-y-3"
+        role="list"
+        aria-label="Subject bullet points"
+      >
         {bulletPoints.length === 0 && (
           <div
             data-testid="subject-bullet-points-placeholder"
             className="text-lg text-gray-500 dark:text-gray-400 italic p-4 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg text-center transition-colors duration-300"
+            role="status"
           >
             Bullet points will appear here as you speak...
           </div>

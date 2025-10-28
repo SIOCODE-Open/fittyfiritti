@@ -5,6 +5,7 @@ import {
   useTranscriptionEvents,
   type CompletedTranscription,
 } from '../contexts/TranscriptionEventsContext'
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcut'
 import { SubjectDetectionService } from '../services/SubjectDetectionService'
 import { SubjectCard, type BulletPointItem } from './SubjectCard'
 import type { Language } from './WelcomeScreen'
@@ -242,12 +243,35 @@ export function SubjectDisplay({
     }
   }
 
+  const handleTogglePause = () => {
+    if (isPresentationPaused) {
+      resumePresentation()
+    } else {
+      pausePresentation()
+    }
+  }
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    NAVIGATE_PREVIOUS: handlePrevious,
+    NAVIGATE_NEXT: handleNext,
+    PAUSE_PRESENTATION: handleTogglePause,
+    EXPORT_PRESENTATION: handleExportMarkdown,
+  })
+
   return (
-    <div data-testid="subject-display" className="h-full flex flex-col">
+    <div
+      data-testid="subject-display"
+      className="h-full flex flex-col"
+      role="region"
+      aria-label="Presentation subjects and bullet points"
+    >
       {/* Unified Header with Status, Navigation, and Export */}
       <div
         data-testid="subject-display-header"
         className="flex justify-between items-center p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 transition-colors duration-300"
+        role="toolbar"
+        aria-label="Presentation controls"
       >
         {/* Left: Status Icon + Navigation */}
         <div
@@ -259,20 +283,26 @@ export function SubjectDisplay({
             <div
               data-testid="presentation-paused-indicator"
               title="Presentation Paused"
+              role="status"
+              aria-label="Presentation paused"
             >
               <Icon
                 icon="mdi:pause-circle"
                 className="w-6 h-6 text-amber-600 dark:text-amber-500"
+                aria-hidden="true"
               />
             </div>
           ) : (
             <div
               data-testid="presentation-running-indicator"
               title="Presentation Running"
+              role="status"
+              aria-label="Presentation running"
             >
               <Icon
                 icon="mdi:play-circle"
                 className="w-6 h-6 text-green-600 dark:text-green-500"
+                aria-hidden="true"
               />
             </div>
           )}
@@ -282,6 +312,8 @@ export function SubjectDisplay({
             <div
               data-testid="subject-navigation-controls"
               className="flex gap-1 ml-2"
+              role="group"
+              aria-label="Subject navigation"
             >
               <button
                 data-testid="subject-previous-button"
@@ -289,11 +321,13 @@ export function SubjectDisplay({
                 disabled={!canNavigatePrevious}
                 className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Previous subject"
-                aria-label="Previous subject"
+                aria-label="Navigate to previous subject - Keyboard shortcut: Ctrl+Left Arrow"
+                aria-disabled={!canNavigatePrevious}
               >
                 <Icon
                   icon="mdi:chevron-left"
                   className="w-5 h-5 text-gray-600 dark:text-gray-300"
+                  aria-hidden="true"
                 />
               </button>
               <button
@@ -302,16 +336,20 @@ export function SubjectDisplay({
                 disabled={!canNavigateNext}
                 className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Next subject"
-                aria-label="Next subject"
+                aria-label="Navigate to next subject - Keyboard shortcut: Ctrl+Right Arrow"
+                aria-disabled={!canNavigateNext}
               >
                 <Icon
                   icon="mdi:chevron-right"
                   className="w-5 h-5 text-gray-600 dark:text-gray-300"
+                  aria-hidden="true"
                 />
               </button>
               <div
                 data-testid="subject-navigation-counter"
                 className="flex items-center px-2 text-sm text-gray-600 dark:text-gray-300 transition-colors duration-300"
+                role="status"
+                aria-label={`Subject ${currentHistoryIndex + 1} of ${subjectHistory.length}`}
               >
                 {currentHistoryIndex + 1} / {subjectHistory.length}
               </div>
@@ -326,11 +364,13 @@ export function SubjectDisplay({
           disabled={subjectHistory.length === 0}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           title="Export all subjects as markdown"
-          aria-label="Export all subjects as markdown"
+          aria-label="Export all subjects as markdown - Keyboard shortcut: Ctrl+Shift+D"
+          aria-disabled={subjectHistory.length === 0}
         >
           <Icon
             icon="mdi:download"
             className="w-5 h-5 text-gray-600 dark:text-gray-300"
+            aria-hidden="true"
           />
         </button>
       </div>
@@ -339,6 +379,9 @@ export function SubjectDisplay({
       <div
         data-testid="subject-display-content"
         className="flex-1 overflow-y-auto p-4"
+        role="region"
+        aria-live="polite"
+        aria-label="Current subject content"
       >
         {/* Current Subject */}
         {currentSubject && (
@@ -354,6 +397,9 @@ export function SubjectDisplay({
           <div
             data-testid="subject-analyzing-indicator"
             className="mb-4 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 transition-colors duration-300"
+            role="status"
+            aria-live="polite"
+            aria-label="Analyzing transcription"
           >
             <div className="w-4 h-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin"></div>
           </div>
@@ -364,14 +410,17 @@ export function SubjectDisplay({
           <div
             data-testid="subject-display-empty"
             className="h-full flex items-center justify-center"
+            role="status"
           >
             <div className="text-center p-8">
               <div className="text-6xl mb-4">
                 <Icon
                   icon="mdi:brain"
                   className="w-12 h-12 text-gray-400 dark:text-gray-500"
+                  aria-hidden="true"
                 />
               </div>
+              <p className="sr-only">No subject selected yet</p>
             </div>
           </div>
         )}

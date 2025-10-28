@@ -1,6 +1,7 @@
 import { Icon } from '@iconify/react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from '../contexts/TranslationContext'
+import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut'
 import type { CardData, SubjectHistoryItem } from '../utils/downloadUtils'
 import {
   downloadPresentation,
@@ -104,14 +105,23 @@ export function MeetingSummaryScreen({
     downloadPresentation(subjectHistory, speakerLanguage, otherPartyLanguage)
   }
 
+  // Keyboard shortcut to start new meeting
+  useKeyboardShortcut('CLOSE_MODAL', onNewMeeting)
+
   return (
     <div
       data-testid="meeting-summary-screen"
       className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 p-8 transition-colors duration-300"
+      role="dialog"
+      aria-labelledby="meeting-summary-heading"
+      aria-modal="false"
     >
       {/* Header */}
       <div data-testid="meeting-summary-header" className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 text-center transition-colors duration-300">
+        <h1
+          id="meeting-summary-heading"
+          className="text-4xl font-bold text-gray-900 dark:text-gray-100 text-center transition-colors duration-300"
+        >
           Meeting Summary
         </h1>
       </div>
@@ -120,6 +130,8 @@ export function MeetingSummaryScreen({
       <div
         data-testid="meeting-summary-card"
         className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 mb-8 max-w-4xl w-full transition-colors duration-300"
+        role="article"
+        aria-label="Meeting summary content"
       >
         {/* Summary Text */}
         <div data-testid="meeting-summary-content" className="mb-6">
@@ -127,10 +139,14 @@ export function MeetingSummaryScreen({
             <div
               data-testid="summary-generating-loader"
               className="flex items-center justify-center py-12"
+              role="status"
+              aria-live="polite"
+              aria-label="Generating summary"
             >
               <Icon
                 icon="mdi:loading"
                 className="w-12 h-12 text-blue-600 animate-spin"
+                aria-hidden="true"
               />
             </div>
           ) : (
@@ -145,8 +161,15 @@ export function MeetingSummaryScreen({
                 <div
                   data-testid="summary-streaming-indicator"
                   className="flex items-center gap-2 mt-4 text-blue-600"
+                  role="status"
+                  aria-live="polite"
+                  aria-label="Still generating summary"
                 >
-                  <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" />
+                  <Icon
+                    icon="mdi:loading"
+                    className="w-5 h-5 animate-spin"
+                    aria-hidden="true"
+                  />
                 </div>
               )}
             </>
@@ -163,10 +186,14 @@ export function MeetingSummaryScreen({
               <div
                 data-testid="translation-generating-loader"
                 className="flex items-center justify-center py-12"
+                role="status"
+                aria-live="polite"
+                aria-label="Translating summary"
               >
                 <Icon
                   icon="mdi:loading"
                   className="w-12 h-12 text-blue-600 animate-spin"
+                  aria-hidden="true"
                 />
               </div>
             ) : (
@@ -174,6 +201,7 @@ export function MeetingSummaryScreen({
                 <p
                   data-testid="meeting-summary-translated-text"
                   className="text-2xl leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap transition-colors duration-300"
+                  lang="ja"
                 >
                   {translatedSummary}
                 </p>
@@ -181,8 +209,15 @@ export function MeetingSummaryScreen({
                   <div
                     data-testid="translation-streaming-indicator"
                     className="flex items-center gap-2 mt-4 text-blue-600"
+                    role="status"
+                    aria-live="polite"
+                    aria-label="Still translating summary"
                   >
-                    <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" />
+                    <Icon
+                      icon="mdi:loading"
+                      className="w-5 h-5 animate-spin"
+                      aria-hidden="true"
+                    />
                   </div>
                 )}
               </>
@@ -192,7 +227,12 @@ export function MeetingSummaryScreen({
       </div>
 
       {/* Action Buttons - All in one row with equal sizes */}
-      <div data-testid="meeting-summary-actions" className="flex gap-4 mb-8">
+      <div
+        data-testid="meeting-summary-actions"
+        className="flex gap-4 mb-8"
+        role="group"
+        aria-label="Meeting summary actions"
+      >
         {/* Download Transcriptions */}
         <button
           data-testid="download-transcriptions-button"
@@ -200,8 +240,10 @@ export function MeetingSummaryScreen({
           disabled={transcriptionData.length === 0}
           className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors shadow-lg hover:shadow-xl disabled:cursor-not-allowed flex-1"
           title="Transcriptions"
+          aria-label="Download transcriptions - Keyboard shortcut: Ctrl+D"
+          aria-disabled={transcriptionData.length === 0}
         >
-          <Icon icon="mdi:download" className="w-5 h-5" />
+          <Icon icon="mdi:download" className="w-5 h-5" aria-hidden="true" />
           <span>Transcriptions</span>
         </button>
 
@@ -213,8 +255,10 @@ export function MeetingSummaryScreen({
             disabled={subjectHistory.length === 0}
             className="flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors shadow-lg hover:shadow-xl disabled:cursor-not-allowed flex-1"
             title="Presentation"
+            aria-label="Download presentation - Keyboard shortcut: Ctrl+Shift+D"
+            aria-disabled={subjectHistory.length === 0}
           >
-            <Icon icon="mdi:download" className="w-5 h-5" />
+            <Icon icon="mdi:download" className="w-5 h-5" aria-hidden="true" />
             <span>Presentation</span>
           </button>
         )}
@@ -225,14 +269,23 @@ export function MeetingSummaryScreen({
           onClick={onNewMeeting}
           className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors shadow-lg hover:shadow-xl flex-1"
           title="Start a new meeting"
+          aria-label="Start a new meeting - Keyboard shortcut: Esc"
         >
-          <Icon icon="mdi:check-circle" className="w-5 h-5" />
+          <Icon
+            icon="mdi:check-circle"
+            className="w-5 h-5"
+            aria-hidden="true"
+          />
           <span>Finished</span>
         </button>
       </div>
 
       {/* Bottom Left Buttons */}
-      <div className="fixed bottom-8 left-8 flex gap-3 z-50">
+      <div
+        className="fixed bottom-8 left-8 flex gap-3 z-50"
+        role="navigation"
+        aria-label="Application controls"
+      >
         {/* Theme Toggle Button */}
         <ThemeToggleButton />
 
@@ -243,21 +296,24 @@ export function MeetingSummaryScreen({
           rel="noopener noreferrer"
           className="w-14 h-14 bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
           title="View on GitHub"
+          aria-label="View source code on GitHub (opens in new window)"
         >
           <Icon
             icon="mdi:github"
             className="w-8 h-8 group-hover:scale-110 transition-transform"
+            aria-hidden="true"
           />
         </a>
       </div>
 
       {/* Created by SIOCODE - Fixed to bottom-right corner */}
-      <div className="fixed bottom-8 right-8 z-50">
+      <div className="fixed bottom-8 right-8 z-50" role="contentinfo">
         <a
           href="https://siocode.hu"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors duration-300 group"
+          aria-label="Created by SIOCODE - Visit their website (opens in new window)"
         >
           <span className="text-sm font-medium">Created by</span>
           <span className="text-sm font-bold group-hover:underline">

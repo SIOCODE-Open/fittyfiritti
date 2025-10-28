@@ -159,14 +159,27 @@ export function TranscriptionCard({
           ? 'bg-green-800 dark:bg-green-900 text-white border-green-600 dark:border-green-700'
           : 'bg-blue-600 dark:bg-blue-700 text-white border-blue-400 dark:border-blue-500'
       }`}
+      role="article"
+      aria-label={
+        card.type === 'microphone'
+          ? 'Microphone transcription'
+          : 'System audio transcription'
+      }
     >
       {/* Transcription Content */}
       {isTranscribing && !originalText && (
         <div
           data-testid="transcription-loading"
           className="flex items-center gap-3 mb-4"
+          role="status"
+          aria-live="polite"
+          aria-label="Transcribing audio"
         >
-          <Icon icon="mdi:microphone" className="w-6 h-6 animate-pulse" />
+          <Icon
+            icon="mdi:microphone"
+            className="w-6 h-6 animate-pulse"
+            aria-hidden="true"
+          />
           <span className="text-xl opacity-75">Transcribing...</span>
         </div>
       )}
@@ -192,8 +205,15 @@ export function TranscriptionCard({
             <div
               data-testid="translation-loading"
               className="flex items-center gap-3 pt-4 border-t border-opacity-30 border-white mb-2"
+              role="status"
+              aria-live="polite"
+              aria-label="Translating text"
             >
-              <Icon icon="mdi:translate" className="w-6 h-6 animate-pulse" />
+              <Icon
+                icon="mdi:translate"
+                className="w-6 h-6 animate-pulse"
+                aria-hidden="true"
+              />
               <span className="text-xl opacity-75">Translating...</span>
             </div>
           )}

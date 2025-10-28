@@ -1,5 +1,6 @@
 import { Icon } from '@iconify/react'
 import { useState } from 'react'
+import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut'
 import { ThemeToggleButton } from './ThemeToggleButton'
 
 export type Language = 'english' | 'spanish' | 'japanese'
@@ -57,15 +58,23 @@ export function WelcomeScreen({
   const handleStartRecording = () => {
     onStartRecording(speakerLanguage, otherPartyLanguage, presentationMode)
   }
+
+  // Keyboard shortcuts
+  useKeyboardShortcut('START_RECORDING', handleStartRecording, !isInitializing)
+  useKeyboardShortcut('OPEN_HELP', () => onOpenHelp?.(), !!onOpenHelp)
+
   return (
     <div
       data-testid="welcome-screen"
       className="flex flex-col items-center justify-center min-h-screen transition-colors duration-300"
+      role="main"
+      aria-label="Welcome screen"
     >
       {/* Logo */}
       <div
         data-testid="welcome-logo-section"
         className="mb-12 flex flex-row items-center space-x-4"
+        role="banner"
       >
         <img
           data-testid="welcome-logo-image"
@@ -85,6 +94,8 @@ export function WelcomeScreen({
       <div
         data-testid="language-settings-panel"
         className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mb-12 w-full max-w-md transition-colors duration-300"
+        role="form"
+        aria-label="Language and presentation mode settings"
       >
         <div className="space-y-6">
           {/* Speaker Language */}
@@ -101,6 +112,8 @@ export function WelcomeScreen({
               value={speakerLanguage}
               onChange={e => setSpeakerLanguage(e.target.value as Language)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors duration-300"
+              aria-label="Select your language"
+              aria-describedby="speaker-language-description"
             >
               {languageOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -108,6 +121,9 @@ export function WelcomeScreen({
                 </option>
               ))}
             </select>
+            <span id="speaker-language-description" className="sr-only">
+              Choose the language you will be speaking in
+            </span>
           </div>
 
           {/* Other Party Language */}
@@ -124,6 +140,8 @@ export function WelcomeScreen({
               value={otherPartyLanguage}
               onChange={e => setOtherPartyLanguage(e.target.value as Language)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors duration-300"
+              aria-label="Select other party's language"
+              aria-describedby="other-party-language-description"
             >
               {languageOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -131,6 +149,9 @@ export function WelcomeScreen({
                 </option>
               ))}
             </select>
+            <span id="other-party-language-description" className="sr-only">
+              Choose the language the other person will be speaking in
+            </span>
           </div>
 
           {/* Presentation Mode */}
@@ -149,6 +170,8 @@ export function WelcomeScreen({
                 setPresentationMode(e.target.value as PresentationMode)
               }
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors duration-300"
+              aria-label="Select presentation mode"
+              aria-describedby="presentation-mode-description"
             >
               {presentationModeOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -157,6 +180,7 @@ export function WelcomeScreen({
               ))}
             </select>
             <p
+              id="presentation-mode-description"
               data-testid="presentation-mode-description"
               className="text-xs text-gray-500 dark:text-gray-400 mt-1 transition-colors duration-300"
             >
@@ -175,24 +199,37 @@ export function WelcomeScreen({
         onClick={handleStartRecording}
         disabled={isInitializing}
         className="w-32 h-32 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-full transition-all duration-200 shadow-2xl hover:shadow-3xl hover:scale-105 flex items-center justify-center group"
+        aria-label={
+          isInitializing
+            ? 'Starting recording, please wait'
+            : 'Start recording - Keyboard shortcut: Ctrl+R'
+        }
+        aria-live="polite"
+        aria-busy={isInitializing}
       >
         {isInitializing ? (
           <Icon
             data-testid="start-recording-loading-icon"
             icon="mdi:loading"
             className="w-12 h-12 animate-spin"
+            aria-hidden="true"
           />
         ) : (
           <Icon
             data-testid="start-recording-microphone-icon"
             icon="mdi:microphone"
             className="w-16 h-16 group-hover:scale-110 transition-transform"
+            aria-hidden="true"
           />
         )}
       </button>
 
       {/* Bottom Left Buttons */}
-      <div className="fixed bottom-8 left-8 flex gap-3 z-50">
+      <div
+        className="fixed bottom-8 left-8 flex gap-3 z-50"
+        role="navigation"
+        aria-label="Application controls"
+      >
         {/* Theme Toggle Button */}
         <ThemeToggleButton />
 
@@ -203,10 +240,12 @@ export function WelcomeScreen({
             onClick={onOpenHelp}
             className="w-14 h-14 bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
             title="Help & Setup Guide"
+            aria-label="Open help and setup guide - Keyboard shortcut: Ctrl+H"
           >
             <Icon
               icon="mdi:help-circle"
               className="w-8 h-8 group-hover:scale-110 transition-transform"
+              aria-hidden="true"
             />
           </button>
         )}
@@ -219,10 +258,12 @@ export function WelcomeScreen({
           rel="noopener noreferrer"
           className="w-14 h-14 bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
           title="View on GitHub"
+          aria-label="View source code on GitHub (opens in new window)"
         >
           <Icon
             icon="mdi:github"
             className="w-8 h-8 group-hover:scale-110 transition-transform"
+            aria-hidden="true"
           />
         </a>
       </div>
@@ -231,12 +272,14 @@ export function WelcomeScreen({
       <div
         data-testid="siocode-attribution"
         className="fixed bottom-8 right-8 z-50"
+        role="contentinfo"
       >
         <a
           href="https://siocode.hu"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors duration-300 group"
+          aria-label="Created by SIOCODE - Visit their website (opens in new window)"
         >
           <span className="text-sm font-medium">Created by</span>
           <span className="text-sm font-bold group-hover:underline">
