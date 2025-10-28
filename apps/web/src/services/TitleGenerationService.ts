@@ -25,6 +25,8 @@ export class TitleGenerationService {
     try {
       // Initialize base session for subject titles with few-shot examples
       this.baseSessionSubjectTitle = await createLanguageModelSession({
+        temperature: 0.3,
+        topK: 5,
         expectedInputs: [{ type: 'text', languages: ['en'] }],
         expectedOutputs: [{ type: 'text', languages: ['en'] }],
         initialPrompts: [
@@ -77,6 +79,8 @@ Respond only with JSON containing the title.`,
 
       // Initialize base session for diagram titles with few-shot examples
       this.baseSessionDiagramTitle = await createLanguageModelSession({
+        temperature: 0.3,
+        topK: 5,
         expectedInputs: [{ type: 'text', languages: ['en'] }],
         expectedOutputs: [{ type: 'text', languages: ['en'] }],
         initialPrompts: [

@@ -28,6 +28,8 @@ export class BulletPointGenerationService {
     try {
       // Initialize base session for single bullet point with few-shot examples
       this.baseSessionSingleBulletPoint = await createLanguageModelSession({
+        temperature: 0.3,
+        topK: 5,
         expectedInputs: [{ type: 'text', languages: ['en'] }],
         expectedOutputs: [{ type: 'text', languages: ['en'] }],
         initialPrompts: [
@@ -79,6 +81,8 @@ Respond only with JSON containing text.`,
 
       // Initialize base session for multiple bullet points with few-shot examples
       this.baseSessionMultipleBulletPoints = await createLanguageModelSession({
+        temperature: 0.3,
+        topK: 5,
         expectedInputs: [{ type: 'text', languages: ['en'] }],
         expectedOutputs: [{ type: 'text', languages: ['en'] }],
         initialPrompts: [

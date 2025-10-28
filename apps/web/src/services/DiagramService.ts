@@ -37,46 +37,63 @@ export class DiagramService {
     try {
       // Initialize base session for diagram actions with few-shot examples
       this.baseSessionDiagramActions = await createLanguageModelSession({
+        temperature: 0.3,
+        topK: 5,
         expectedInputs: [{ type: 'text', languages: ['en'] }],
         expectedOutputs: [{ type: 'text', languages: ['en'] }],
         initialPrompts: [
           {
             role: 'system',
-            content: `You extract diagram nodes and connections from speech. Keep it simple.
+            content: `You extract diagram nodes and connections from speech. You must be smart about reusing existing nodes.
 
 Your job:
-1. Find ALL nouns/concepts mentioned -> create "addNode" for each
-2. Find flow/connection words -> create "addEdge"
+1. Check EXISTING nodes first - if a similar concept exists, use its ID
+2. Extract NEW concepts -> create "addNode" only if not already in diagram
+3. Find flow/connection words -> create "addEdge"
 
 Action types:
-- addNode: Add a box (requires: id, label)
-- addEdge: Connect boxes (requires: from, to)
+- addNode: Add a box (requires: id, label) - ONLY if concept doesn't exist yet
+- addEdge: Connect boxes (requires: from, to) - use existing node IDs
 - noOperation: Only if nothing to extract
 
-Node extraction (MOST IMPORTANT):
-- ANY noun, concept, step, or component = addNode
-- Phrases like "we have X", "X is next", "there's Y" = addNode for X/Y
-- Lists "A, B, and C" = addNode for each
+CRITICAL RULES FOR NODE MATCHING:
+1. ALWAYS check if the diagram already contains a similar concept
+2. Match synonyms and related terms:
+   - "database" matches "MySQL database", "DB", "data store"
+   - "backend" matches "back-end", "server", "API server"
+   - "frontend" matches "front-end", "UI", "client"
+   - "user" matches "client", "end user", "customer"
+3. If user says "the database" and "MySQL database" exists, use "mysql_database" ID
+4. If user says "identity provider" and "cognito" exists, they might be the same - use context
+5. Only create a NEW node if it's clearly a different concept
+
+Node ID generation (for NEW nodes):
 - Generate simple IDs: "Setup Phase" -> "setup_phase", "API" -> "api"
 - Make IDs lowercase with underscores for spaces
+- Remove special characters: "MySQL DB" -> "mysql_db"
 
 Edge extraction:
-- "from X to Y", "X goes to Y", "after X comes Y" = addEdge from X to Y
-- IMPORTANT: Use EXACT node IDs from the current diagram state when provided
+- "from X to Y", "X goes to Y", "X talks to Y", "after X comes Y" = addEdge
+- IMPORTANT: Use EXACT node IDs from current diagram when available
+- Match natural language to existing nodes (e.g., "the backend" -> find "backend" ID)
 - For edges referencing new nodes, use the IDs you just created
 
-Examples:
-"We have initialization" -> [{"type":"addNode","id":"initialization","label":"initialization"}]
+Examples with existing nodes:
+"We have initialization" (no existing nodes) -> [{"type":"addNode","id":"initialization","label":"initialization"}]
 
-"After setup, branch A and branch B" -> [{"type":"addNode","id":"setup","label":"setup"},{"type":"addNode","id":"branch_a","label":"branch a"},{"type":"addNode","id":"branch_b","label":"branch b"}]
+"After setup, branch A and branch B" (no existing nodes) -> [{"type":"addNode","id":"setup","label":"setup"},{"type":"addNode","id":"branch_a","label":"branch A"},{"type":"addNode","id":"branch_b","label":"branch B"}]
 
-"From VAD to transcription" (VAD already exists) -> [{"type":"addNode","id":"transcription","label":"transcription"},{"type":"addEdge","from":"vad","to":"transcription"}]
+"The backend talks to the database" (existing: mysql_database, backend) -> [{"type":"addEdge","from":"backend","to":"mysql_database"}]
 
-CRITICAL: Be aggressive with addNode - extract every concept! But be careful with addEdge - only when connections are explicitly mentioned.
+"User connects to frontend" (existing: frontend) -> [{"type":"addNode","id":"user","label":"user"},{"type":"addEdge","from":"user","to":"frontend"}]
+
+"Frontend calls the API, and API queries the DB" (existing: frontend, backend, mysql_database) -> [{"type":"addEdge","from":"frontend","to":"backend"},{"type":"addEdge","from":"backend","to":"mysql_database"}]
+
+CRITICAL: Be smart about matching! Before creating a new node, check if similar concept exists. Be aggressive with matching synonyms.
 
 Respond with JSON array of actions.`,
           },
-          // Few-shot example 1 - Single node
+          // Few-shot example 1 - Single node (no existing)
           {
             role: 'user',
             content:
@@ -87,7 +104,7 @@ Respond with JSON array of actions.`,
             content:
               '{"actions":[{"type":"addNode","id":"initialization","label":"initialization"}]}',
           },
-          // Few-shot example 2 - Multiple nodes
+          // Few-shot example 2 - Multiple nodes (no existing)
           {
             role: 'user',
             content:
@@ -98,16 +115,38 @@ Respond with JSON array of actions.`,
             content:
               '{"actions":[{"type":"addNode","id":"processing","label":"processing"},{"type":"addNode","id":"validation","label":"validation"},{"type":"addNode","id":"storage","label":"storage"}]}',
           },
-          // Few-shot example 3 - Node with edge
+          // Few-shot example 3 - Edge with existing nodes
           {
             role: 'user',
             content:
-              'Extract diagram editing instructions from: "And then, from the API it goes to, um, the database"\n\nCurrent diagram state:\nNodes: "api" (label: "API")\nEdges: none\n\nWhen referencing nodes for edges, use the exact IDs listed above.',
+              'Extract diagram editing instructions from: "And then, from the API it goes to, um, the database"\n\nCurrent diagram state:\nExisting Nodes:\n  - "api" (label: "API")\n  - "mysql_database" (label: "MySQL database")\nExisting Edges: none\n\nIMPORTANT: "database" matches "MySQL database" - use ID "mysql_database"',
           },
           {
             role: 'assistant',
             content:
-              '{"actions":[{"type":"addNode","id":"database","label":"database"},{"type":"addEdge","from":"api","to":"database"}]}',
+              '{"actions":[{"type":"addEdge","from":"api","to":"mysql_database"}]}',
+          },
+          // Few-shot example 4 - Mixed: new node + edge to existing
+          {
+            role: 'user',
+            content:
+              'Extract diagram editing instructions from: "The user connects to the frontend"\n\nCurrent diagram state:\nExisting Nodes:\n  - "frontend" (label: "frontend")\n  - "backend" (label: "backend")\nExisting Edges: none\n\nIMPORTANT: "frontend" already exists - reuse it!',
+          },
+          {
+            role: 'assistant',
+            content:
+              '{"actions":[{"type":"addNode","id":"user","label":"user"},{"type":"addEdge","from":"user","to":"frontend"}]}',
+          },
+          // Few-shot example 5 - Complex with synonym matching
+          {
+            role: 'user',
+            content:
+              'Extract diagram editing instructions from: "The backend also talks to Cognito for authentication"\n\nCurrent diagram state:\nExisting Nodes:\n  - "backend" (label: "backend")\n  - "frontend" (label: "frontend")\n  - "mysql_database" (label: "MySQL database")\nExisting Edges:\n  - "frontend" -> "backend"\n  - "backend" -> "mysql_database"\n\nIMPORTANT: "backend" already exists - reuse it!',
+          },
+          {
+            role: 'assistant',
+            content:
+              '{"actions":[{"type":"addNode","id":"cognito","label":"Cognito"},{"type":"addEdge","from":"backend","to":"cognito"}]}',
           },
         ],
       })
@@ -133,16 +172,31 @@ Respond with JSON array of actions.`,
 
     const clonedSession = await this.baseSessionDiagramActions.clone()
     try {
-      // Build current diagram state context
+      // Build current diagram state context with better formatting
       let diagramStateContext = ''
       if (currentDiagramData && currentDiagramData.nodes.length > 0) {
+        // Format nodes list with clear labels
+        const nodesText = currentDiagramData.nodes
+          .map(n => `  - "${n.id}" (label: "${n.label}")`)
+          .join('\n')
+
+        // Format edges list
+        const edgesText =
+          currentDiagramData.edges.length > 0
+            ? currentDiagramData.edges
+                .map(e => `  - "${e.from}" -> "${e.to}"`)
+                .join('\n')
+            : '  none'
+
         diagramStateContext = `
 
 Current diagram state:
-Nodes: ${currentDiagramData.nodes.map(n => `"${n.id}" (label: "${n.label}")`).join(', ')}
-Edges: ${currentDiagramData.edges.length > 0 ? currentDiagramData.edges.map(e => `"${e.from}" -> "${e.to}"`).join(', ') : 'none'}
+Existing Nodes:
+${nodesText}
+Existing Edges:
+${edgesText}
 
-When referencing nodes for edges, use the exact IDs listed above.`
+IMPORTANT: Before creating a new node, check if a similar concept already exists above. Match synonyms and related terms (e.g., "database" matches "MySQL database"). Prefer reusing existing node IDs over creating duplicates.`
       }
 
       const actionsResult = await retryAIPromptWithJSON<{

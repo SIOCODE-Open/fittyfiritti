@@ -280,9 +280,14 @@ export function MainApplication() {
       // 1. VAD must be loaded
       if (vad.loading) {
         console.log('⏳ Waiting for VAD to load...')
-        await new Promise<void>(resolve => {
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('VAD loading timeout after 30 seconds'))
+          }, 30000) // 30 second timeout
+
           const checkVAD = () => {
             if (!vad.loading) {
+              clearTimeout(timeout)
               resolve()
             } else {
               setTimeout(checkVAD, 100)
@@ -297,9 +302,30 @@ export function MainApplication() {
         console.log(
           '⏳ Waiting for PresentationControlService to initialize...'
         )
-        await new Promise<void>(resolve => {
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(
+              new Error(
+                'PresentationControlService initialization timeout after 30 seconds'
+              )
+            )
+          }, 30000) // 30 second timeout
+
           const checkPresentation = () => {
+            // Check if initialization failed
+            if (presentationControl.error) {
+              clearTimeout(timeout)
+              reject(
+                new Error(
+                  `PresentationControlService initialization failed: ${presentationControl.error}`
+                )
+              )
+              return
+            }
+
+            // Check if initialized successfully
             if (presentationControl.isInitialized) {
+              clearTimeout(timeout)
               resolve()
             } else {
               setTimeout(checkPresentation, 100)
@@ -591,7 +617,11 @@ export function MainApplication() {
           <div data-testid="welcome-screen-container" className="flex-1">
             <WelcomeScreen
               onStartRecording={handleStartRecording}
-              isInitializing={isInitializing}
+              isInitializing={
+                isInitializing ||
+                vad.loading ||
+                presentationControl.isInitializing
+              }
               onOpenHelp={handleOpenHelp}
             />
           </div>
