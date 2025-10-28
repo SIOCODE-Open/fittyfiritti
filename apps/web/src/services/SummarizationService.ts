@@ -57,7 +57,7 @@ export class SummarizationService {
       // Generate summary
       const summary = await this.summarizer.summarize(fullText, {
         context:
-          'Summarize the key points and decisions from this meeting conversation.',
+          'Summarize the key points and decisions from this meeting conversation. Do not add any commentary to your response. Your response MUST ONLY consist of the summary.',
       })
 
       return summary
@@ -104,7 +104,7 @@ export class SummarizationService {
       // Generate streaming summary
       const stream = this.summarizer.summarizeStreaming(fullText, {
         context:
-          'Summarize the key points and decisions from this meeting conversation.',
+          'Summarize the key points and decisions from this meeting conversation. Do not add any commentary to your response. Your response MUST ONLY consist of the summary.',
       })
 
       // Wrap the stream to ensure cleanup

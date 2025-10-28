@@ -315,11 +315,6 @@ export async function transcribeAudioStreaming(
 ): Promise<ReadableStream<string>> {
   const prompt: PromptMessage[] = [
     {
-      role: 'system',
-      content:
-        'You are a precise transcription assistant. Transcribe the audio accurately without any additional commentary.',
-    },
-    {
       role: 'user',
       content: [
         {
@@ -334,7 +329,9 @@ export async function transcribeAudioStreaming(
     },
   ]
 
-  return session.promptStreaming(prompt, { signal })
+  const clonedSession = await session.clone({ signal })
+
+  return clonedSession.promptStreaming(prompt, { signal })
 }
 
 // Chrome Translation API Types

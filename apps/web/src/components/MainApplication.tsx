@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { usePresentationControl } from '../contexts/PresentationControlContext'
 import { useSubject } from '../contexts/SubjectContext'
 import { useSystemAudioAnalysis } from '../contexts/SystemAudioAnalysisContext'
 import { useSystemAudio } from '../contexts/SystemAudioContext'
@@ -33,6 +34,7 @@ export function MainApplication() {
   const { subjectHistory, resetSubjects } = useSubject()
   const vad = useVAD()
   const systemAudio = useSystemAudio()
+  const presentationControl = usePresentationControl()
 
   const [isRecording, setIsRecording] = useState(false)
   const [transcriptionCards, setTranscriptionCards] = useState<
@@ -274,7 +276,40 @@ export function MainApplication() {
         selectedPresentationMode === 'both-speakers'
       setIncludeSystemAudioInAnalysis(includeSystemAudioInAnalysis)
 
-      // Initialize services
+      // Wait for all services to be ready
+      // 1. VAD must be loaded
+      if (vad.loading) {
+        console.log('⏳ Waiting for VAD to load...')
+        await new Promise<void>(resolve => {
+          const checkVAD = () => {
+            if (!vad.loading) {
+              resolve()
+            } else {
+              setTimeout(checkVAD, 100)
+            }
+          }
+          checkVAD()
+        })
+      }
+
+      // 2. PresentationControlService must be initialized
+      if (!presentationControl.isInitialized) {
+        console.log(
+          '⏳ Waiting for PresentationControlService to initialize...'
+        )
+        await new Promise<void>(resolve => {
+          const checkPresentation = () => {
+            if (presentationControl.isInitialized) {
+              resolve()
+            } else {
+              setTimeout(checkPresentation, 100)
+            }
+          }
+          checkPresentation()
+        })
+      }
+
+      // 3. Initialize transcription and translation services
       await Promise.all([
         transcriptionService.initialize(selectedSpeakerLanguage),
         speakerToOtherPartyService.initialize(
@@ -298,7 +333,7 @@ export function MainApplication() {
       setHasStartedRecording(true) // Mark that recording has been started at least once
       setIsInitializing(false)
 
-      console.log('🎙️ VAD recording started successfully')
+      console.log('🎙️ VAD recording started successfully - all services ready')
     } catch (error) {
       console.error('Failed to start recording:', error)
       setError(

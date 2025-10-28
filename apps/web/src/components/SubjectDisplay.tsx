@@ -1,5 +1,6 @@
 import { Icon } from '@iconify/react'
 import { useCallback, useEffect, useState } from 'react'
+import { usePresentationControl } from '../contexts/PresentationControlContext'
 import { useSubject } from '../contexts/SubjectContext'
 import {
   useTranscriptionEvents,
@@ -7,7 +8,6 @@ import {
 } from '../contexts/TranscriptionEventsContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcut'
-import { SubjectDetectionService } from '../services/SubjectDetectionService'
 import type { DiagramData } from '../types'
 import { Diagram } from './Diagram'
 import { SubjectCard, type BulletPointItem } from './SubjectCard'
@@ -45,9 +45,7 @@ export function SubjectDisplay({
   } = useSubject()
   const { onTranscriptionComplete } = useTranscriptionEvents()
   const { speakerToOtherPartyService } = useTranslation()
-  const [subjectDetectionService] = useState(
-    () => new SubjectDetectionService()
-  )
+  const { service: subjectDetectionService } = usePresentationControl()
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [bulletPoints, setBulletPoints] = useState<BulletPointItem[]>([])
 
@@ -89,11 +87,7 @@ export function SubjectDisplay({
     [speakerLanguage, otherPartyLanguage, speakerToOtherPartyService]
   )
 
-  // Initialize subject detection service
-  useEffect(() => {
-    subjectDetectionService.initialize().catch(console.error)
-    return () => subjectDetectionService.destroy()
-  }, [subjectDetectionService])
+  // Service is now initialized by the context, no need to initialize here
 
   // Sync presentation state with service
   useEffect(() => {
