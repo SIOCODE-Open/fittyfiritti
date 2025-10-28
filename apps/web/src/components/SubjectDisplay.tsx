@@ -41,6 +41,7 @@ export function SubjectDisplay({
     resumePresentation,
     updateDiagramData,
     isInDiagramMode,
+    exitDiagramEditingMode,
   } = useSubject()
   const { onTranscriptionComplete } = useTranscriptionEvents()
   const { speakerToOtherPartyService } = useTranslation()
@@ -201,19 +202,37 @@ export function SubjectDisplay({
 
           return
         } else if (result.action.action === 'endDiagram') {
-          // Exit diagram mode by creating a new slide subject
-          // Generate a title for the new subject from the next transcription
-          const bootstrapTitle =
-            await subjectDetectionService.generateBootstrapTitle(
+          // Check if the speaker wants to change subjects or just exit diagram mode
+          const hasSubjectChangeIntent =
+            await subjectDetectionService.detectSubjectChangeIntent(
               transcription.text
             )
 
-          const newSlideSubject = {
-            id: Math.random().toString(36).substr(2, 9),
-            title: bootstrapTitle,
-            type: 'slide' as const,
+          if (hasSubjectChangeIntent) {
+            // Generate a title for the new subject from the transcription
+            const bootstrapTitle =
+              await subjectDetectionService.generateBootstrapTitle(
+                transcription.text
+              )
+
+            const newSlideSubject = {
+              id: Math.random().toString(36).substr(2, 9),
+              title: bootstrapTitle,
+              type: 'slide' as const,
+            }
+            changeSubject(newSlideSubject)
+            console.log(
+              '🔄 Exited diagram mode with subject change to:',
+              bootstrapTitle
+            )
+          } else {
+            // Just exit diagram editing mode without changing subject
+            exitDiagramEditingMode()
+            console.log(
+              '✅ Exited diagram editing mode, staying on current diagram'
+            )
           }
-          changeSubject(newSlideSubject)
+
           return
         } else if (result.action.action === 'diagramAction') {
           // Apply diagram actions to current diagram
@@ -380,6 +399,7 @@ export function SubjectDisplay({
       pausePresentation,
       resumePresentation,
       updateDiagramData,
+      exitDiagramEditingMode,
       speakerLanguage,
       otherPartyLanguage,
       translateText,

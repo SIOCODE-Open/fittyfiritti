@@ -215,6 +215,18 @@ const multipleBulletPointsSchema: JSONSchema = {
   required: ['bulletPoints'],
 }
 
+const subjectChangeIntentSchema: JSONSchema = {
+  type: 'object',
+  properties: {
+    hasSubjectChangeIntent: {
+      type: 'boolean',
+      description:
+        'Whether the text expresses intent to change to a new topic/subject',
+    },
+  },
+  required: ['hasSubjectChangeIntent'],
+}
+
 export class SubjectDetectionService {
   private actionSessionPaused: LanguageModelSession | null = null
   private actionSessionRunning: LanguageModelSession | null = null
@@ -224,6 +236,7 @@ export class SubjectDetectionService {
   private multipleBulletPointsSession: LanguageModelSession | null = null
   private diagramTitleSession: LanguageModelSession | null = null
   private diagramActionsSession: LanguageModelSession | null = null
+  private subjectChangeIntentSession: LanguageModelSession | null = null
   private isInitialized = false
   private transcriptionHistory: string[] = []
   private maxHistorySize = 10 // Keep last 10 transcriptions for context
@@ -456,6 +469,43 @@ Examples:
 CRITICAL: Be aggressive with addNode - extract every concept! But be careful with addEdge - only when connections are explicitly mentioned.
 
 Respond with JSON array of actions.`,
+          },
+        ],
+      })
+
+      // Initialize subject change intent detection session
+      this.subjectChangeIntentSession = await createLanguageModelSession({
+        expectedInputs: [{ type: 'text', languages: ['en'] }],
+        expectedOutputs: [{ type: 'text', languages: ['en'] }],
+        initialPrompts: [
+          {
+            role: 'system',
+            content: `You detect whether a transcription expresses an intent to CHANGE TO A NEW TOPIC/SUBJECT.
+
+Your job is to determine if the speaker is:
+1. Moving on to a completely different topic/subject (return true)
+2. Just finishing the current activity without changing topics (return false)
+
+Examples that SHOULD trigger subject change (true):
+- "Alright, let's move on to the technical details"
+- "Now let's talk about the implementation"
+- "Next topic is performance optimization"
+- "Moving on to the next section"
+- "Let's switch to discussing the backend"
+
+Examples that should NOT trigger subject change (false):
+- "Alright, I think that diagram is finished"
+- "That's done, let's continue"
+- "Okay, diagram complete"
+- "That looks good"
+- "Finished with this"
+
+Key indicators for subject change:
+- Explicit transition phrases: "moving on to", "next topic", "let's talk about", "switch to"
+- Mentioning a specific new topic name
+- Clear topic boundaries
+
+Respond with JSON containing hasSubjectChangeIntent (boolean).`,
           },
         ],
       })
@@ -931,6 +981,34 @@ New transcription: "${transcription}"`
     }
   }
 
+  async detectSubjectChangeIntent(transcription: string): Promise<boolean> {
+    if (!this.subjectChangeIntentSession) {
+      throw new Error('Subject Detection Service not initialized')
+    }
+
+    try {
+      const response = await this.subjectChangeIntentSession.prompt(
+        `Transcription: "${transcription}"`,
+        {
+          responseConstraint: subjectChangeIntentSchema,
+        }
+      )
+
+      const result = JSON.parse(response)
+      const hasIntent = result.hasSubjectChangeIntent ?? false
+
+      console.log(
+        `🔍 Subject change intent detection for "${transcription}": ${hasIntent}`
+      )
+
+      return hasIntent
+    } catch (error) {
+      console.error('Failed to detect subject change intent:', error)
+      // Default to false (don't change subject) on error
+      return false
+    }
+  }
+
   getHistorySize(): number {
     return this.transcriptionHistory.length
   }
@@ -968,6 +1046,10 @@ New transcription: "${transcription}"`
     if (this.diagramActionsSession) {
       this.diagramActionsSession.destroy()
       this.diagramActionsSession = null
+    }
+    if (this.subjectChangeIntentSession) {
+      this.subjectChangeIntentSession.destroy()
+      this.subjectChangeIntentSession = null
     }
 
     this.transcriptionHistory = []

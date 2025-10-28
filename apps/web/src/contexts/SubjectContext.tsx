@@ -51,6 +51,8 @@ export interface SubjectContextValue {
   // Diagram-specific methods
   updateDiagramData: (diagramData: DiagramData) => void
   isInDiagramMode: boolean
+  enterDiagramEditingMode: () => void
+  exitDiagramEditingMode: () => void
 }
 
 const SubjectContext = createContext<SubjectContextValue | null>(null)
@@ -74,6 +76,7 @@ export function SubjectProvider({ children }: SubjectProviderProps) {
   const [currentHistoryIndex, setCurrentHistoryIndex] = useState<number>(-1)
   const [isPresentationPaused, setIsPresentationPaused] =
     useState<boolean>(true) // Start paused
+  const [isEditingDiagram, setIsEditingDiagram] = useState<boolean>(false)
 
   const changeSubject = (subject: Subject, subjectTranslation?: string) => {
     setCurrentSubject(subject)
@@ -84,6 +87,14 @@ export function SubjectProvider({ children }: SubjectProviderProps) {
       { subject, bulletPoints: [], subjectTranslation },
     ])
     setCurrentHistoryIndex(prev => prev + 1)
+
+    // Automatically enter diagram editing mode when creating a diagram subject
+    if (subject.type === 'diagram') {
+      setIsEditingDiagram(true)
+    } else {
+      // Exit diagram editing mode when switching to a non-diagram subject
+      setIsEditingDiagram(false)
+    }
   }
 
   const addBulletPointToHistory = (bulletPoint: BulletPointItem) => {
@@ -108,6 +119,13 @@ export function SubjectProvider({ children }: SubjectProviderProps) {
       if (historyItem) {
         setCurrentHistoryIndex(index)
         setCurrentSubject(historyItem.subject)
+
+        // Update diagram editing mode based on subject type
+        if (historyItem.subject.type === 'diagram') {
+          setIsEditingDiagram(false) // When navigating back to a diagram, don't auto-enter editing mode
+        } else {
+          setIsEditingDiagram(false)
+        }
       }
     }
   }
@@ -206,7 +224,23 @@ export function SubjectProvider({ children }: SubjectProviderProps) {
     [currentHistoryIndex, currentSubject]
   )
 
-  const isInDiagramMode = currentSubject?.type === 'diagram'
+  const enterDiagramEditingMode = useCallback(() => {
+    if (currentSubject?.type === 'diagram') {
+      setIsEditingDiagram(true)
+      console.log('📝 Entered diagram editing mode')
+    } else {
+      console.warn(
+        '⚠️ Cannot enter diagram editing mode - not on a diagram subject'
+      )
+    }
+  }, [currentSubject])
+
+  const exitDiagramEditingMode = useCallback(() => {
+    setIsEditingDiagram(false)
+    console.log('✅ Exited diagram editing mode')
+  }, [])
+
+  const isInDiagramMode = currentSubject?.type === 'diagram' && isEditingDiagram
 
   const value: SubjectContextValue = {
     currentSubject,
@@ -225,6 +259,8 @@ export function SubjectProvider({ children }: SubjectProviderProps) {
     resetSubjects,
     updateDiagramData,
     isInDiagramMode,
+    enterDiagramEditingMode,
+    exitDiagramEditingMode,
   }
 
   return (
