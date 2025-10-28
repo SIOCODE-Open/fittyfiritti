@@ -266,6 +266,29 @@ export function FeaturesHelpPage() {
                 </p>
               </div>
             </div>
+
+            {/* Diagram Editing */}
+            <div className="flex items-start gap-3 p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded border border-cyan-200 dark:border-cyan-800 transition-colors duration-300">
+              <Icon
+                icon="mdi:graph-outline"
+                className="w-6 h-6 text-cyan-600 dark:text-cyan-400 mt-0.5"
+              />
+              <div>
+                <h4 className="font-semibold text-gray-800 dark:text-gray-200 transition-colors duration-300">
+                  Voice-Controlled Diagram Editing
+                </h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">
+                  Create and edit diagrams using voice commands. Simply say
+                  "let's create a diagram" to start, then describe nodes and
+                  connections naturally.
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">
+                  <strong>Example commands:</strong> "Add a node called
+                  Database", "Connect API to Database", "Remove the Cache node",
+                  "That's it for the diagram"
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import type { Language } from '../components/WelcomeScreen'
+import type { Subject } from '../contexts/SubjectContext'
 
 export interface CardData {
   cardId: string
@@ -8,7 +9,7 @@ export interface CardData {
 }
 
 export interface SubjectHistoryItem {
-  subject: { id: string; title: string }
+  subject: Subject
   subjectTranslation?: string
   bulletPoints: Array<{
     id: string
@@ -80,26 +81,53 @@ export function downloadPresentation(
     .map(historyItem => {
       const lines: string[] = []
 
-      // Subject title (level 1 heading)
-      lines.push(`# ${historyItem.subject.title}`)
-      lines.push('')
-
-      // Subject translation (level 2 heading) if available
-      if (shouldShowTranslations && historyItem.subjectTranslation) {
-        lines.push(`## ${historyItem.subjectTranslation}`)
+      // Check subject type
+      if (historyItem.subject.type === 'diagram') {
+        // Diagram subject
+        lines.push(`# ${historyItem.subject.title} [Diagram]`)
         lines.push('')
-      }
 
-      // Bullet points
-      if (historyItem.bulletPoints.length > 0) {
-        historyItem.bulletPoints.forEach(bp => {
-          lines.push(`- ${bp.text}`)
-          if (shouldShowTranslations && bp.translation) {
-            lines.push(`  - ${bp.translation}`)
-          }
-        })
+        // Subject translation (level 2 heading) if available
+        if (shouldShowTranslations && historyItem.subjectTranslation) {
+          lines.push(`## ${historyItem.subjectTranslation}`)
+          lines.push('')
+        }
+
+        // Export diagram as JSON code block
+        lines.push('```json')
+        lines.push(
+          JSON.stringify(
+            {
+              nodes: historyItem.subject.diagramData.nodes,
+              edges: historyItem.subject.diagramData.edges,
+            },
+            null,
+            2
+          )
+        )
+        lines.push('```')
       } else {
-        lines.push('_No bullet points yet_')
+        // Slide subject
+        lines.push(`# ${historyItem.subject.title}`)
+        lines.push('')
+
+        // Subject translation (level 2 heading) if available
+        if (shouldShowTranslations && historyItem.subjectTranslation) {
+          lines.push(`## ${historyItem.subjectTranslation}`)
+          lines.push('')
+        }
+
+        // Bullet points
+        if (historyItem.bulletPoints.length > 0) {
+          historyItem.bulletPoints.forEach(bp => {
+            lines.push(`- ${bp.text}`)
+            if (shouldShowTranslations && bp.translation) {
+              lines.push(`  - ${bp.translation}`)
+            }
+          })
+        } else {
+          lines.push('_No bullet points yet_')
+        }
       }
 
       return lines.join('\n')

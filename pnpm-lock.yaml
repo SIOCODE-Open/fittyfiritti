@@ -93,6 +93,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@dagrejs/dagre':
+        specifier: ^1.1.5
+        version: 1.1.5
       '@fittyfiritti/built-in-ai-api':
         specifier: workspace:*
         version: link:../../packages/built-in-ai-api
@@ -239,6 +242,13 @@ packages:
   '@babel/types@7.28.4':
     resolution: {integrity: sha512-bkFqkLhh3pMBUQQkpVgWDWq/lqzc2678eUyDlTBhRqhCHFguYYGM0Efga7tYk4TogG/3x0EEl66/OQ+WGbWB/Q==}
     engines: {node: '>=6.9.0'}
+
+  '@dagrejs/dagre@1.1.5':
+    resolution: {integrity: sha512-Ghgrh08s12DCL5SeiR6AoyE80mQELTWhJBRmXfFoqDiFkR458vPEdgTbbjA0T+9ETNxUblnD0QW55tfdvi5pjQ==}
+
+  '@dagrejs/graphlib@2.2.4':
+    resolution: {integrity: sha512-mepCf/e9+SKYy1d02/UkvSy6+6MoyXhVxP8lLDfA7BPE1X1d4dR0sZznmbM8/XVJ1GPM+Svnx7Xj6ZweByWUkw==}
+    engines: {node: '>17.0.0'}
 
   '@esbuild/aix-ppc64@0.21.5':
     resolution: {integrity: sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==}
@@ -2326,6 +2336,12 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.27.1
+
+  '@dagrejs/dagre@1.1.5':
+    dependencies:
+      '@dagrejs/graphlib': 2.2.4
+
+  '@dagrejs/graphlib@2.2.4': {}
 
   '@esbuild/aix-ppc64@0.21.5':
     optional: true

@@ -51,6 +51,7 @@ export function MainApplication() {
     useState<Language>('japanese')
   const [presentationMode, setPresentationMode] =
     useState<PresentationMode>('both-speakers')
+  const [diagramModeEnabled, setDiagramModeEnabled] = useState<boolean>(false)
 
   // Meeting summary state
   const [showMeetingSummary, setShowMeetingSummary] = useState(false)
@@ -249,7 +250,8 @@ export function MainApplication() {
   const handleStartRecording = async (
     selectedSpeakerLanguage: Language,
     selectedOtherPartyLanguage: Language,
-    selectedPresentationMode: PresentationMode
+    selectedPresentationMode: PresentationMode,
+    selectedDiagramModeEnabled: boolean
   ) => {
     try {
       setIsInitializing(true)
@@ -261,6 +263,9 @@ export function MainApplication() {
 
       // Set the presentation mode
       setPresentationMode(selectedPresentationMode)
+
+      // Set diagram mode enabled
+      setDiagramModeEnabled(selectedDiagramModeEnabled)
 
       // Convert presentation mode to includeSystemAudioInAnalysis:
       // - 'transcription-only' or 'local-only': false (only local speaker influences presentation)
@@ -460,7 +465,8 @@ export function MainApplication() {
     return handleStartRecording(
       speakerLanguage,
       otherPartyLanguage,
-      presentationMode
+      presentationMode,
+      diagramModeEnabled
     )
   }
 
@@ -596,6 +602,7 @@ export function MainApplication() {
                     <SubjectDisplay
                       speakerLanguage={speakerLanguage}
                       otherPartyLanguage={otherPartyLanguage}
+                      diagramModeEnabled={diagramModeEnabled}
                     />
                   </div>
                 </div>

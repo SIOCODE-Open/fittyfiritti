@@ -30,10 +30,11 @@ FittyFiritti solves real-world communication and presentation challenges:
 - **System Audio**: Transcribe system audio through the screen share API
 - **Meeting Support**: Use the application during video calls and online meetings to transcribe all participants
 
-### � Intelligent Presentation Editing
+### 🎯 Intelligent Presentation Editing
 - **Automatic Subject Detection**: Detects changes in conversation topics and organizes them automatically
 - **Smart Bullet Points**: Automatically adds bullet points to your presentation as you speak
 - **Intent Recognition**: Detects when you want to pause or resume the presentation (useful during Q&A sessions)
+- **Voice-Controlled Diagram Editing**: Create and edit diagrams using natural voice commands—just say "let's create a diagram" to start
 - **Configurable Analysis**: Choose whether transcriptions from other parties (system audio) should be included in the presentation, or restrict presentation editing to only the main presenter
 
 ### 🌐 Translation
@@ -43,8 +44,16 @@ FittyFiritti solves real-world communication and presentation challenges:
 ### 💾 Export Capabilities
 - **Download Transcriptions**: Export all transcriptions from the meeting
 - **Download Translations**: Export translated content
-- **Download Presentation**: Export the generated presentation in Markdown format
+- **Download Presentation**: Export the generated presentation with slides and diagrams in Markdown format
 - **Meeting Summary**: Get an AI-generated summary when the meeting is finished
+
+### 🎨 Diagram Editing
+- **Voice-Controlled Creation**: Start diagram mode by saying "let's create a diagram"
+- **Natural Commands**: Add nodes with commands like "add a node called Database"
+- **Connection Management**: Create edges with "connect API to Database"
+- **Real-time Visualization**: See your diagram update in real-time as you speak
+- **Multiple Operations**: Describe multiple changes in one sentence and the AI will apply them all
+- **JSON Export**: Diagrams are exported as structured JSON in your markdown files
 
 ### 🎯 Main Use Case
 Share your screen with the FittyFiritti application during meetings to enable the other party to understand what you're saying and follow your thought process in real-time—eliminating the need for a human interpreter.

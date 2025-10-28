@@ -1,9 +1,21 @@
 import React, { createContext, useCallback, useContext, useState } from 'react'
+import type { DiagramData } from '../types'
 
-export interface Subject {
+// Base Subject types
+export interface SlideSubject {
   id: string
   title: string
+  type: 'slide'
 }
+
+export interface DiagramSubject {
+  id: string
+  title: string
+  type: 'diagram'
+  diagramData: DiagramData
+}
+
+export type Subject = SlideSubject | DiagramSubject
 
 export interface BulletPointItem {
   id: string
@@ -20,7 +32,7 @@ export interface SubjectHistory {
 
 export interface SubjectContextValue {
   currentSubject: Subject | null
-  changeSubject: (subject: Subject) => void
+  changeSubject: (subject: Subject, subjectTranslation?: string) => void
   subjectHistory: SubjectHistory[]
   currentHistoryIndex: number
   addBulletPointToHistory: (bulletPoint: BulletPointItem) => void
@@ -36,6 +48,9 @@ export interface SubjectContextValue {
   pausePresentation: () => void
   resumePresentation: () => void
   resetSubjects: () => void
+  // Diagram-specific methods
+  updateDiagramData: (diagramData: DiagramData) => void
+  isInDiagramMode: boolean
 }
 
 const SubjectContext = createContext<SubjectContextValue | null>(null)
@@ -60,11 +75,14 @@ export function SubjectProvider({ children }: SubjectProviderProps) {
   const [isPresentationPaused, setIsPresentationPaused] =
     useState<boolean>(true) // Start paused
 
-  const changeSubject = (subject: Subject) => {
+  const changeSubject = (subject: Subject, subjectTranslation?: string) => {
     setCurrentSubject(subject)
 
-    // Add new subject to history
-    setSubjectHistory(prev => [...prev, { subject, bulletPoints: [] }])
+    // Add new subject to history with optional translation
+    setSubjectHistory(prev => [
+      ...prev,
+      { subject, bulletPoints: [], subjectTranslation },
+    ])
     setCurrentHistoryIndex(prev => prev + 1)
   }
 
@@ -155,6 +173,41 @@ export function SubjectProvider({ children }: SubjectProviderProps) {
     console.log('🔄 Subjects reset')
   }, [])
 
+  const updateDiagramData = useCallback(
+    (diagramData: DiagramData) => {
+      if (currentHistoryIndex >= 0 && currentSubject?.type === 'diagram') {
+        setSubjectHistory(prev => {
+          const updated = [...prev]
+          const current = updated[currentHistoryIndex]
+          if (current && current.subject.type === 'diagram') {
+            updated[currentHistoryIndex] = {
+              ...current,
+              subject: {
+                ...current.subject,
+                diagramData,
+              },
+            }
+          }
+          return updated
+        })
+
+        // Also update current subject
+        setCurrentSubject(prev => {
+          if (prev?.type === 'diagram') {
+            return {
+              ...prev,
+              diagramData,
+            }
+          }
+          return prev
+        })
+      }
+    },
+    [currentHistoryIndex, currentSubject]
+  )
+
+  const isInDiagramMode = currentSubject?.type === 'diagram'
+
   const value: SubjectContextValue = {
     currentSubject,
     changeSubject,
@@ -170,6 +223,8 @@ export function SubjectProvider({ children }: SubjectProviderProps) {
     pausePresentation,
     resumePresentation,
     resetSubjects,
+    updateDiagramData,
+    isInDiagramMode,
   }
 
   return (

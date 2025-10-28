@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Subject } from '../contexts/SubjectContext'
+import type { SlideSubject } from '../contexts/SubjectContext'
 import { useSubject } from '../contexts/SubjectContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { shouldTranslate } from '../utils/languageUtils'
@@ -14,7 +14,7 @@ export interface BulletPointItem {
 }
 
 interface SubjectCardProps {
-  subject: Subject
+  subject: SlideSubject
   bulletPoints: BulletPointItem[]
   speakerLanguage: Language
   otherPartyLanguage: Language

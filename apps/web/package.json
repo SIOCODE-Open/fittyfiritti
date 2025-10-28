@@ -14,10 +14,11 @@
     "zip": "node scripts/zip-dist.js"
   },
   "dependencies": {
+    "@dagrejs/dagre": "^1.1.5",
     "@fittyfiritti/built-in-ai-api": "workspace:*",
+    "@iconify/react": "6.0.2",
     "react": "*",
-    "react-dom": "*",
-    "@iconify/react": "6.0.2"
+    "react-dom": "*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "*",

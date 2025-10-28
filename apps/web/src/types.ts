@@ -55,3 +55,23 @@ export interface TranslationService {
   ): Promise<void>
   destroy(): void
 }
+
+// Diagram Types
+export interface DiagramNode {
+  id: string
+  label: string
+  translation?: string
+  width?: number
+  height?: number
+}
+
+export interface DiagramEdge {
+  from: string
+  to: string
+  id?: string
+}
+
+export interface DiagramData {
+  nodes: DiagramNode[]
+  edges: DiagramEdge[]
+}

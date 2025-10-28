@@ -14,7 +14,8 @@ interface WelcomeScreenProps {
   onStartRecording: (
     speakerLanguage: Language,
     otherPartyLanguage: Language,
-    presentationMode: PresentationMode
+    presentationMode: PresentationMode,
+    diagramModeEnabled: boolean
   ) => void
   isInitializing: boolean
   onOpenHelp?: () => void
@@ -30,6 +31,7 @@ export function WelcomeScreen({
     useState<Language>('japanese')
   const [presentationMode, setPresentationMode] =
     useState<PresentationMode>('both-speakers')
+  const [diagramModeEnabled, setDiagramModeEnabled] = useState<boolean>(false)
 
   const languageOptions = [
     { value: 'english', label: 'English' },
@@ -56,7 +58,12 @@ export function WelcomeScreen({
   ]
 
   const handleStartRecording = () => {
-    onStartRecording(speakerLanguage, otherPartyLanguage, presentationMode)
+    onStartRecording(
+      speakerLanguage,
+      otherPartyLanguage,
+      presentationMode,
+      diagramModeEnabled
+    )
   }
 
   // Keyboard shortcuts
@@ -189,6 +196,31 @@ export function WelcomeScreen({
                   opt => opt.value === presentationMode
                 )?.description
               }
+            </p>
+          </div>
+
+          {/* Diagram Mode */}
+          <div data-testid="diagram-mode-section">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                data-testid="diagram-mode-checkbox"
+                checked={diagramModeEnabled}
+                onChange={e => setDiagramModeEnabled(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 dark:focus:ring-blue-600 focus:ring-2 transition-colors duration-300"
+                aria-label="Enable diagram editing mode"
+                aria-describedby="diagram-mode-description"
+              />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-300">
+                Enable Diagram Editing
+              </span>
+            </label>
+            <p
+              id="diagram-mode-description"
+              data-testid="diagram-mode-description"
+              className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6 transition-colors duration-300"
+            >
+              Allow creating and editing diagrams during the presentation
             </p>
           </div>
         </div>
