@@ -21,6 +21,10 @@ FittyFiritti solves real-world communication and presentation challenges:
 
 **Language Support**: Currently supports English, Spanish, and Japanese. Language support is constrained by the Gemini Nano model's capabilities, with more languages expected in future updates.
 
+<p align="center">
+  <img src="docs/screen-welcome.png" alt="FittyFiritti Welcome Screen" width="800"/>
+</p>
+
 ---
 
 ## ✨ Key Features
@@ -31,6 +35,11 @@ FittyFiritti solves real-world communication and presentation challenges:
 - **Meeting Support**: Use the application during video calls and online meetings to transcribe all participants
 
 ### 🎯 Intelligent Presentation Editing
+
+<p align="center">
+  <img src="docs/screen-slide.png" alt="Real-time Transcription and Slide Editing" width="800"/>
+</p>
+
 - **Automatic Subject Detection**: Detects changes in conversation topics and organizes them automatically
 - **Smart Bullet Points**: Automatically adds bullet points to your presentation as you speak
 - **Intent Recognition**: Detects when you want to pause or resume the presentation (useful during Q&A sessions)
@@ -42,12 +51,22 @@ FittyFiritti solves real-world communication and presentation challenges:
 - **Meeting Summary Translation**: Automatically translates the meeting summary to the other party's language
 
 ### 💾 Export Capabilities
+
+<p align="center">
+  <img src="docs/screen-summary.png" alt="Meeting Summary and Export" width="800"/>
+</p>
+
 - **Download Transcriptions**: Export all transcriptions from the meeting
 - **Download Translations**: Export translated content
 - **Download Presentation**: Export the generated presentation with slides and diagrams in Markdown format
 - **Meeting Summary**: Get an AI-generated summary when the meeting is finished
 
 ### 🎨 Diagram Editing
+
+<p align="center">
+  <img src="docs/screen-diagram.png" alt="Voice-Controlled Diagram Editing" width="800"/>
+</p>
+
 - **Voice-Controlled Creation**: Start diagram mode by saying "let's create a diagram"
 - **Natural Commands**: Add nodes with commands like "add a node called Database"
 - **Connection Management**: Create edges with "connect API to Database"
