@@ -1,5 +1,6 @@
 import { Icon } from '@iconify/react'
 import { useEffect, useRef, useState } from 'react'
+import { useFormalization } from '../contexts/FormalizationContext'
 import { useTranscription } from '../contexts/TranscriptionContext'
 import { useTranslation } from '../contexts/TranslationContext'
 import { TranscriptionCardData } from './TranscriptionStream'
@@ -7,6 +8,7 @@ import { TranscriptionCardData } from './TranscriptionStream'
 interface TranscriptionCardProps {
   card: TranscriptionCardData
   shouldShowTranslations: boolean
+  formalizationEnabled?: boolean
   onTranscriptionComplete?: (
     cardId: string,
     text: string,
@@ -19,20 +21,25 @@ interface TranscriptionCardProps {
 export function TranscriptionCard({
   card,
   shouldShowTranslations,
+  formalizationEnabled = false,
   onTranscriptionComplete,
   onTranslationComplete,
   onTranscriptionEmpty,
 }: TranscriptionCardProps) {
   const [originalText, setOriginalText] = useState('')
+  const [formalizedText, setFormalizedText] = useState('')
   const [translatedText, setTranslatedText] = useState('')
   const [isTranscribing, setIsTranscribing] = useState(false)
+  const [isFormalizing, setIsFormalizing] = useState(false)
   const [isTranslating, setIsTranslating] = useState(false)
   const [transcriptionComplete, setTranscriptionComplete] = useState(false)
 
   const isTranscribingRef = useRef(false)
+  const isFormalizingRef = useRef(false)
   const isTranslatingRef = useRef(false)
 
   const transcriptionService = useTranscription()
+  const { rewriterService } = useFormalization()
   const { speakerToOtherPartyService, otherPartyToSpeakerService } =
     useTranslation()
 
@@ -53,6 +60,8 @@ export function TranscriptionCard({
         const reader = stream.getReader()
         let accumulated = ''
 
+        // When formalization is enabled, don't show the streaming text
+        // Only show it when formalization is disabled
         while (true) {
           const { done, value } = await reader.read()
 
@@ -61,19 +70,34 @@ export function TranscriptionCard({
           }
 
           accumulated += value
-          setOriginalText(accumulated)
+
+          // Only show streaming text if formalization is disabled
+          if (!formalizationEnabled) {
+            setOriginalText(accumulated)
+          }
         }
 
         setIsTranscribing(false)
-        setTranscriptionComplete(true)
-        isTranscribingRef.current = false
 
+        // If we have text, proceed to formalization or mark as complete
         if (accumulated.trim()) {
-          if (onTranscriptionComplete) {
-            onTranscriptionComplete(card.id, accumulated, card.timestamp)
+          // Store original text always
+          setOriginalText(accumulated)
+
+          // If formalization is enabled, start the formalization process
+          if (formalizationEnabled) {
+            runFormalization(accumulated)
+          } else {
+            // No formalization, mark transcription complete
+            setTranscriptionComplete(true)
+            isTranscribingRef.current = false
+            if (onTranscriptionComplete) {
+              onTranscriptionComplete(card.id, accumulated, card.timestamp)
+            }
           }
         } else {
           // Notify parent that transcription is empty so card can be removed
+          isTranscribingRef.current = false
           if (onTranscriptionEmpty) {
             onTranscriptionEmpty(card.id)
           }
@@ -89,16 +113,64 @@ export function TranscriptionCard({
       }
     }
 
+    // Formalization function
+    async function runFormalization(text: string) {
+      if (isFormalizingRef.current) {
+        return
+      }
+
+      isFormalizingRef.current = true
+      setIsFormalizing(true)
+
+      try {
+        const stream = await rewriterService.rewriteStreaming(text)
+        const reader = stream.getReader()
+        let accumulated = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+
+          if (done) {
+            break
+          }
+
+          accumulated += value
+          setFormalizedText(accumulated)
+        }
+
+        setIsFormalizing(false)
+        setTranscriptionComplete(true)
+        isTranscribingRef.current = false
+        isFormalizingRef.current = false
+
+        // Use the formalized text for callbacks and translation
+        if (onTranscriptionComplete) {
+          onTranscriptionComplete(card.id, accumulated, card.timestamp)
+        }
+      } catch (error) {
+        console.error('❌ Formalization failed for card:', card.id, error)
+        setIsFormalizing(false)
+        isFormalizingRef.current = false
+
+        // Fall back to original text if formalization fails
+        setTranscriptionComplete(true)
+        isTranscribingRef.current = false
+        if (onTranscriptionComplete) {
+          onTranscriptionComplete(card.id, text, card.timestamp)
+        }
+      }
+    }
+
     runTranscription()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Translation effect - only runs when transcription is complete
+  // Translation effect - only runs when transcription/formalization is complete
   useEffect(() => {
     if (
       !transcriptionComplete ||
       !shouldShowTranslations ||
-      !originalText.trim()
+      (!originalText.trim() && !formalizedText.trim())
     ) {
       return
     }
@@ -112,6 +184,9 @@ export function TranscriptionCard({
       setIsTranslating(true)
 
       try {
+        // Use formalized text if available, otherwise use original
+        const textToTranslate = formalizedText || originalText
+
         // Select the correct pre-initialized translation service based on card type
         const translationService =
           card.type === 'microphone'
@@ -121,7 +196,7 @@ export function TranscriptionCard({
         // Use streaming translation (no need to re-initialize)
         const stream =
           await translationService.translateToTargetLanguageStreaming(
-            originalText
+            textToTranslate
           )
         const reader = stream.getReader()
         let accumulated = ''
@@ -149,7 +224,7 @@ export function TranscriptionCard({
 
     runTranslation()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transcriptionComplete])
+  }, [transcriptionComplete, formalizedText, originalText])
 
   return (
     <div
@@ -166,8 +241,8 @@ export function TranscriptionCard({
           : 'System audio transcription'
       }
     >
-      {/* Transcription Content */}
-      {isTranscribing && !originalText && (
+      {/* Transcription/Formalization Content */}
+      {isTranscribing && !formalizedText && !originalText && (
         <div
           data-testid="transcription-loading"
           className="flex items-center gap-3 mb-4"
@@ -184,14 +259,36 @@ export function TranscriptionCard({
         </div>
       )}
 
-      {originalText && (
+      {/* Show formalization in progress when enabled */}
+      {formalizationEnabled &&
+        isFormalizing &&
+        !formalizedText &&
+        originalText && (
+          <div
+            data-testid="formalization-loading"
+            className="flex items-center gap-3 mb-4"
+            role="status"
+            aria-live="polite"
+            aria-label="Formalizing transcription"
+          >
+            <Icon
+              icon="mdi:pencil-box-outline"
+              className="w-6 h-6 animate-pulse"
+              aria-hidden="true"
+            />
+            <span className="text-xl opacity-75">Formalizing...</span>
+          </div>
+        )}
+
+      {/* Display formalized text if available, otherwise original text */}
+      {(formalizedText || (!formalizationEnabled && originalText)) && (
         <div data-testid="transcription-text-container" className="mb-4">
           <div
             data-testid="transcription-original-text"
             className="text-2xl leading-relaxed font-medium"
           >
-            {originalText}
-            {isTranscribing && (
+            {formalizedText || originalText}
+            {(isFormalizing || isTranscribing) && (
               <span className="inline-block w-2 h-8 bg-white bg-opacity-60 ml-1 animate-pulse"></span>
             )}
           </div>
@@ -199,7 +296,7 @@ export function TranscriptionCard({
       )}
 
       {/* Translation section - only shown when languages differ */}
-      {shouldShowTranslations && originalText && (
+      {shouldShowTranslations && (formalizedText || originalText) && (
         <>
           {isTranslating && !translatedText && (
             <div

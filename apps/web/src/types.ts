@@ -75,3 +75,43 @@ export interface DiagramData {
   nodes: DiagramNode[]
   edges: DiagramEdge[]
 }
+
+// Rewriter API Types (Chrome Built-in AI)
+export type RewriterTone = 'more-formal' | 'as-is' | 'more-casual'
+export type RewriterFormat = 'as-is' | 'markdown' | 'plain-text'
+export type RewriterLength = 'shorter' | 'as-is' | 'longer'
+
+export interface RewriterOptions {
+  tone?: RewriterTone
+  format?: RewriterFormat
+  length?: RewriterLength
+  sharedContext?: string
+  expectedInputLanguages?: string[]
+  expectedContextLanguages?: string[]
+  outputLanguage?: string
+  signal?: AbortSignal
+}
+
+export interface RewriterSession {
+  rewrite(
+    text: string,
+    options?: { context?: string; signal?: AbortSignal }
+  ): Promise<string>
+  rewriteStreaming(
+    text: string,
+    options?: { context?: string; signal?: AbortSignal }
+  ): ReadableStream<string>
+  destroy(): void
+}
+
+export interface RewriterAPI {
+  availability(): Promise<'available' | 'downloadable' | 'unavailable'>
+  create(options?: RewriterOptions): Promise<RewriterSession>
+}
+
+export interface RewriterService {
+  rewriteStreaming(text: string): Promise<ReadableStream<string>>
+  initialize(): Promise<void>
+  destroy(): void
+  isAvailable(): Promise<boolean>
+}

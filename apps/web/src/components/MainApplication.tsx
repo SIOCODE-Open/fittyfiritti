@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useFormalization } from '../contexts/FormalizationContext'
 import { usePresentationControl } from '../contexts/PresentationControlContext'
 import { useSubject } from '../contexts/SubjectContext'
 import { useSystemAudioAnalysis } from '../contexts/SystemAudioAnalysisContext'
@@ -35,6 +36,8 @@ export function MainApplication() {
   const vad = useVAD()
   const systemAudio = useSystemAudio()
   const presentationControl = usePresentationControl()
+  const { rewriterService, setFormalizationEnabled, isFormalizationEnabled } =
+    useFormalization()
 
   const [isRecording, setIsRecording] = useState(false)
   const [transcriptionCards, setTranscriptionCards] = useState<
@@ -253,7 +256,8 @@ export function MainApplication() {
     selectedSpeakerLanguage: Language,
     selectedOtherPartyLanguage: Language,
     selectedPresentationMode: PresentationMode,
-    selectedDiagramModeEnabled: boolean
+    selectedDiagramModeEnabled: boolean,
+    selectedFormalizationEnabled: boolean
   ) => {
     try {
       setIsInitializing(true)
@@ -268,6 +272,9 @@ export function MainApplication() {
 
       // Set diagram mode enabled
       setDiagramModeEnabled(selectedDiagramModeEnabled)
+
+      // Set formalization enabled
+      setFormalizationEnabled(selectedFormalizationEnabled)
 
       // Convert presentation mode to includeSystemAudioInAnalysis:
       // - 'transcription-only' or 'local-only': false (only local speaker influences presentation)
@@ -347,6 +354,29 @@ export function MainApplication() {
           selectedSpeakerLanguage
         ),
       ])
+
+      // 4. Initialize rewriter service if formalization is enabled
+      if (selectedFormalizationEnabled) {
+        console.log('⏳ Initializing Rewriter service...')
+        try {
+          const available = await rewriterService.isAvailable()
+          if (!available) {
+            console.warn(
+              '⚠️ Rewriter API is not available. Formalization will be disabled.'
+            )
+            setFormalizationEnabled(false)
+          } else {
+            await rewriterService.initialize()
+            console.log('✅ Rewriter service initialized')
+          }
+        } catch (error) {
+          console.error('❌ Failed to initialize Rewriter service:', error)
+          setFormalizationEnabled(false)
+          setError(
+            'Failed to initialize formalization service. Continuing without formalization.'
+          )
+        }
+      }
 
       // Set up VAD callbacks
       vad.onSpeechEnd(handleSpeechEnd)
@@ -527,7 +557,8 @@ export function MainApplication() {
       speakerLanguage,
       otherPartyLanguage,
       presentationMode,
-      diagramModeEnabled
+      diagramModeEnabled,
+      isFormalizationEnabled
     )
   }
 
@@ -541,6 +572,7 @@ export function MainApplication() {
       const currentSpeakerToOtherPartyService = speakerToOtherPartyService
       const currentOtherPartyToSpeakerService = otherPartyToSpeakerService
       const currentSummarizationService = summarizationServiceRef.current
+      const currentRewriterService = rewriterService
 
       currentVad.pause()
       currentSystemAudio.stop()
@@ -548,6 +580,7 @@ export function MainApplication() {
       currentSpeakerToOtherPartyService.destroy()
       currentOtherPartyToSpeakerService.destroy()
       currentSummarizationService?.destroy()
+      currentRewriterService.destroy()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run on mount/unmount
@@ -654,6 +687,7 @@ export function MainApplication() {
                     systemTranscriptionCards={systemTranscriptionCards}
                     speakerLanguage={speakerLanguage}
                     otherPartyLanguage={otherPartyLanguage}
+                    formalizationEnabled={isFormalizationEnabled}
                     onTranscriptionComplete={handleTranscriptionComplete}
                     onTranslationComplete={handleTranslationComplete}
                     onTranscriptionEmpty={handleTranscriptionEmpty}

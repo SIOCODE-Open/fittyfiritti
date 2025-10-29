@@ -9,6 +9,7 @@ interface TranscriptionStreamProps {
   systemTranscriptionCards: SystemTranscriptionCard[]
   speakerLanguage: Language
   otherPartyLanguage: Language
+  formalizationEnabled?: boolean
   onTranscriptionComplete?: (
     cardId: string,
     text: string,
@@ -38,6 +39,7 @@ export function TranscriptionStream({
   systemTranscriptionCards,
   speakerLanguage,
   otherPartyLanguage,
+  formalizationEnabled = false,
   onTranscriptionComplete,
   onTranslationComplete,
   onTranscriptionEmpty,
@@ -212,6 +214,7 @@ export function TranscriptionStream({
               key={card.id}
               card={card}
               shouldShowTranslations={shouldShowTranslations}
+              formalizationEnabled={formalizationEnabled}
               onTranscriptionComplete={handleTranscriptionCompleteWrapper}
               onTranslationComplete={handleTranslationCompleteWrapper}
               onTranscriptionEmpty={onTranscriptionEmpty}
