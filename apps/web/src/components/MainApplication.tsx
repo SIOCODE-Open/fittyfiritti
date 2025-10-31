@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useAudioCapture } from '../contexts/AudioCaptureContext'
 import { useFormalization } from '../contexts/FormalizationContext'
 import { usePresentationControl } from '../contexts/PresentationControlContext'
+import {
+  SoloParticipant,
+  useSoloRecording,
+} from '../contexts/SoloRecordingContext'
 import { useSubject } from '../contexts/SubjectContext'
 import { useSystemAudioAnalysis } from '../contexts/SystemAudioAnalysisContext'
 import { useSystemAudio } from '../contexts/SystemAudioContext'
@@ -38,6 +43,8 @@ export function MainApplication() {
   const presentationControl = usePresentationControl()
   const { rewriterService, setFormalizationEnabled, isFormalizationEnabled } =
     useFormalization()
+  const audioCapture = useAudioCapture()
+  const soloRecording = useSoloRecording()
 
   const [isRecording, setIsRecording] = useState(false)
   const [transcriptionCards, setTranscriptionCards] = useState<
@@ -69,6 +76,12 @@ export function MainApplication() {
   // Store transcription data for downloads and summary
   const transcriptionDataRef = useRef<CardData[]>([])
   const summarizationServiceRef = useRef<SummarizationService | null>(null)
+
+  // Solo recording state - accumulate audio chunks
+  const soloAudioChunksRef = useRef<Blob[]>([])
+  const soloRecordingStartTimeRef = useRef<number | null>(null)
+  const soloModeActiveRef = useRef<boolean>(false)
+  const soloParticipantRef = useRef<SoloParticipant | null>(null)
 
   // Generate unique IDs
   const generateId = useCallback(
@@ -209,6 +222,12 @@ export function MainApplication() {
   // Handle VAD speech detection
   const handleSpeechEnd = useCallback(
     async (audioData: Float32Array) => {
+      // Ignore VAD events when in solo mode - use ref to avoid stale closure
+      if (soloModeActiveRef.current) {
+        console.log('🎙️ Ignoring VAD speech end during solo recording')
+        return
+      }
+
       try {
         console.log('🗣️ Processing speech end, audio length:', audioData.length)
 
@@ -236,6 +255,22 @@ export function MainApplication() {
   // Handle system audio segment completion
   const handleSystemAudioSegment = useCallback(
     async (audioChunk: AudioChunk) => {
+      // If in solo mode for system audio, accumulate chunks instead of processing
+      if (
+        soloModeActiveRef.current &&
+        soloParticipantRef.current === 'system'
+      ) {
+        console.log('🎙️ Accumulating system audio chunk during solo recording')
+        soloAudioChunksRef.current.push(audioChunk.blob)
+        return
+      }
+
+      // Ignore system audio VAD events when in solo mode for user
+      if (soloModeActiveRef.current) {
+        console.log('🎙️ Ignoring system audio VAD during user solo recording')
+        return
+      }
+
       try {
         // Process the audio chunk - it will create a card internally
         await handleSystemAudioChunk(audioChunk)
@@ -250,6 +285,203 @@ export function MainApplication() {
   const handleSpeechStart = useCallback(() => {
     // Speech started
   }, [])
+
+  // Solo recording handlers
+  const handleStartSoloRecording = useCallback(
+    async (participant: SoloParticipant) => {
+      try {
+        console.log(`🎙️ Starting solo recording for ${participant}`)
+
+        // Set refs immediately to block VAD events
+        soloModeActiveRef.current = true
+        soloParticipantRef.current = participant
+
+        // Clear any accumulated audio from previous solo recording
+        soloAudioChunksRef.current = []
+        soloRecordingStartTimeRef.current = Date.now()
+
+        // Start capturing audio based on participant
+        if (participant === 'user') {
+          // Start microphone capture for user
+          await audioCapture.startCapture()
+
+          // Set up audio chunk handler to accumulate chunks
+          // Note: We'll collect chunks when we stop recording, not during
+          console.log(
+            '🎙️ User microphone solo recording started - will collect chunks on submit'
+          )
+        } else if (participant === 'system') {
+          // For system audio, we'll rely on the existing system audio VAD
+          // but we'll accumulate the chunks instead of processing them
+          // The system audio chunks are already being captured, we just
+          // need to store them during solo mode
+          console.log('🎙️ System audio solo recording - using existing stream')
+        }
+      } catch (error) {
+        console.error('Failed to start solo recording:', error)
+        setError('Failed to start solo recording. Please try again.')
+        soloRecording.cancelSoloRecording()
+      }
+    },
+    [audioCapture, soloRecording]
+  )
+
+  const handleCancelSoloRecording = useCallback(() => {
+    console.log('❌ Cancelling solo recording')
+
+    // Clear refs
+    soloModeActiveRef.current = false
+    soloParticipantRef.current = null
+
+    // Clean up audio capture
+    if (audioCapture.isCapturing) {
+      audioCapture.stopCapture()
+    }
+
+    // Clear accumulated audio
+    soloAudioChunksRef.current = []
+    soloRecordingStartTimeRef.current = null
+  }, [audioCapture])
+
+  const handleSubmitSoloRecording = useCallback(
+    async (participant: SoloParticipant) => {
+      try {
+        console.log(`✅ Submitting solo recording for ${participant}`)
+
+        // Clear refs immediately
+        soloModeActiveRef.current = false
+        soloParticipantRef.current = null
+
+        // Clean up audio capture
+        if (participant === 'user') {
+          if (audioCapture.isCapturing) {
+            // Stop recording and get all accumulated chunks
+            audioCapture.stopCapture()
+
+            // Wait a bit for the MediaRecorder to finish
+            await new Promise(resolve => setTimeout(resolve, 200))
+
+            // Get the accumulated audio blob
+            const audioBlob = audioCapture.getAccumulatedChunks()
+
+            if (audioBlob) {
+              // Create a transcription card
+              const cardId = generateId()
+              const timestamp = soloRecordingStartTimeRef.current || Date.now()
+
+              const newCard: TranscriptionCard = {
+                id: cardId,
+                audioSegment: audioBlob,
+                timestamp,
+              }
+              setTranscriptionCards(prev => [...prev, newCard])
+
+              console.log(
+                `✅ Solo recording submitted for user, size: ${audioBlob.size} bytes`
+              )
+            } else {
+              console.warn('⚠️ No audio captured during solo recording')
+            }
+          }
+        } else if (participant === 'system') {
+          // For system audio, combine accumulated chunks
+          if (soloAudioChunksRef.current.length > 0) {
+            const combinedBlob = new Blob(soloAudioChunksRef.current, {
+              type: 'audio/webm',
+            })
+
+            const cardId = generateId()
+            const timestamp = soloRecordingStartTimeRef.current || Date.now()
+
+            const newCard: SystemTranscriptionCard = {
+              id: cardId,
+              audioSegment: combinedBlob,
+              timestamp,
+            }
+            setSystemTranscriptionCards(prev => [...prev, newCard])
+
+            console.log(
+              `✅ Solo recording submitted for system, size: ${combinedBlob.size} bytes`
+            )
+          } else {
+            console.warn('⚠️ No audio chunks accumulated during solo recording')
+          }
+        }
+
+        // Clear accumulated audio
+        soloAudioChunksRef.current = []
+        soloRecordingStartTimeRef.current = null
+      } catch (error) {
+        console.error('Failed to submit solo recording:', error)
+        setError('Failed to submit solo recording. Please try again.')
+      }
+    },
+    [audioCapture, generateId]
+  )
+
+  // Set up solo recording callbacks
+  useEffect(() => {
+    // Sync refs with context state
+    soloModeActiveRef.current = soloRecording.isSoloMode
+    if (soloRecording.soloParticipant) {
+      soloParticipantRef.current = soloRecording.soloParticipant
+    }
+
+    return () => {
+      // Cleanup on unmount
+      handleCancelSoloRecording()
+    }
+  }, [
+    soloRecording.isSoloMode,
+    soloRecording.soloParticipant,
+    handleCancelSoloRecording,
+  ])
+
+  // React to solo recording state changes - when solo mode starts
+  useEffect(() => {
+    if (
+      soloRecording.isSoloMode &&
+      soloRecording.soloParticipant &&
+      soloRecordingStartTimeRef.current === null
+    ) {
+      // Solo mode just started
+      console.log(
+        `🎙️ Solo recording starting for ${soloRecording.soloParticipant}`
+      )
+      handleStartSoloRecording(soloRecording.soloParticipant).catch(error => {
+        console.error('Failed to start solo recording:', error)
+        soloRecording.cancelSoloRecording()
+      })
+    }
+  }, [
+    soloRecording.isSoloMode,
+    soloRecording.soloParticipant,
+    handleStartSoloRecording,
+    soloRecording,
+  ])
+
+  // Wrap handlers for RecordingControlPanel
+  const handleSoloSubmitWrapper = useCallback(() => {
+    const participant = soloParticipantRef.current
+    if (participant) {
+      console.log('🔘 Submit button clicked for solo recording')
+      handleSubmitSoloRecording(participant)
+        .then(() => {
+          // After successful submit, tell the context to exit solo mode
+          soloRecording.submitSoloRecording()
+        })
+        .catch(error => {
+          console.error('Failed to submit solo recording:', error)
+        })
+    }
+  }, [handleSubmitSoloRecording, soloRecording])
+
+  const handleSoloCancelWrapper = useCallback(() => {
+    console.log('🔘 Cancel button clicked for solo recording')
+    handleCancelSoloRecording()
+    // Tell the context to exit solo mode
+    soloRecording.cancelSoloRecording()
+  }, [handleCancelSoloRecording, soloRecording])
 
   // Start recording with VAD
   const handleStartRecording = async (
@@ -724,6 +956,9 @@ export function MainApplication() {
                 isInitializing={isInitializing || isGeneratingSummary}
                 userSpeaking={vad.userSpeaking}
                 hasSystemAudio={systemAudio.systemSpeaking}
+                onStartSoloRecording={handleStartSoloRecording}
+                onSoloSubmit={handleSoloSubmitWrapper}
+                onSoloCancel={handleSoloCancelWrapper}
               />
             </div>
           </div>

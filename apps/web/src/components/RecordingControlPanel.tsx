@@ -1,4 +1,8 @@
 import { Icon } from '@iconify/react'
+import {
+  SoloParticipant,
+  useSoloRecording,
+} from '../contexts/SoloRecordingContext'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcut'
 
 interface RecordingControlPanelProps {
@@ -12,6 +16,9 @@ interface RecordingControlPanelProps {
   isInitializing: boolean
   userSpeaking: boolean
   hasSystemAudio?: boolean
+  onStartSoloRecording?: (participant: SoloParticipant) => void
+  onSoloSubmit?: () => void
+  onSoloCancel?: () => void
 }
 
 export function RecordingControlPanel({
@@ -25,10 +32,66 @@ export function RecordingControlPanel({
   isInitializing,
   userSpeaking,
   hasSystemAudio = false,
+  onStartSoloRecording,
+  onSoloSubmit,
+  onSoloCancel,
 }: RecordingControlPanelProps) {
+  const {
+    isSoloMode,
+    soloParticipant,
+    recordingDuration,
+    startSoloRecording,
+    cancelSoloRecording,
+    submitSoloRecording,
+  } = useSoloRecording()
+
+  // Format duration as MM:SS
+  const formatDuration = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Handle clicking on user/system indicators to enter solo mode
+  const handleUserIndicatorClick = () => {
+    if (!isSoloMode && isRecording) {
+      startSoloRecording('user')
+      if (onStartSoloRecording) {
+        onStartSoloRecording('user')
+      }
+    }
+  }
+
+  const handleSystemIndicatorClick = () => {
+    if (!isSoloMode && isSystemCapturing) {
+      startSoloRecording('system')
+      if (onStartSoloRecording) {
+        onStartSoloRecording('system')
+      }
+    }
+  }
+
+  // Handle solo mode buttons
+  const handleSoloCancel = () => {
+    if (onSoloCancel) {
+      onSoloCancel()
+    } else {
+      cancelSoloRecording()
+    }
+  }
+
+  const handleSoloSubmit = () => {
+    if (onSoloSubmit) {
+      onSoloSubmit()
+    } else {
+      submitSoloRecording()
+    }
+  }
+
   // Keyboard shortcuts
   useKeyboardShortcuts({
     TOGGLE_MIC: () => {
+      if (isSoloMode) return // Ignore keyboard shortcuts in solo mode
       if (isRecording) {
         onStopRecording()
       } else {
@@ -36,6 +99,7 @@ export function RecordingControlPanel({
       }
     },
     TOGGLE_SCREEN: () => {
+      if (isSoloMode) return // Ignore keyboard shortcuts in solo mode
       if (!onStartSystemCapture || !onStopSystemCapture) return
       if (isSystemCapturing) {
         onStopSystemCapture()
@@ -44,12 +108,89 @@ export function RecordingControlPanel({
       }
     },
     END_SESSION: () => {
+      if (isSoloMode) return // Ignore keyboard shortcuts in solo mode
       if (onEndSession) {
         onEndSession()
       }
     },
   })
 
+  // Solo mode UI
+  if (isSoloMode && soloParticipant) {
+    return (
+      <div
+        data-testid="recording-control-panel-solo"
+        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm transition-colors duration-300"
+        role="region"
+        aria-label="Solo recording controls"
+      >
+        <div className="px-4 py-4">
+          <div className="flex items-center justify-between">
+            {/* Left side: Participant icon + recording indicator */}
+            <div
+              data-testid="solo-status-container"
+              className="flex items-center gap-4"
+              role="status"
+              aria-label={`Solo recording ${soloParticipant}`}
+            >
+              <Icon
+                data-testid="solo-participant-icon"
+                icon={
+                  soloParticipant === 'user'
+                    ? 'mdi:account-voice'
+                    : 'mdi:waveform'
+                }
+                className="w-8 h-8 text-blue-600"
+                aria-hidden="true"
+              />
+              <Icon
+                data-testid="solo-recording-icon"
+                icon="mdi:record-circle"
+                className="w-8 h-8 text-red-500 animate-pulse"
+                aria-hidden="true"
+              />
+              <span
+                data-testid="solo-duration"
+                className="text-xl font-mono font-semibold text-gray-700 dark:text-gray-200"
+                aria-live="polite"
+              >
+                {formatDuration(recordingDuration)}
+              </span>
+            </div>
+
+            {/* Right side: Cancel and Submit buttons */}
+            <div
+              data-testid="solo-control-buttons"
+              className="flex items-center gap-4"
+              role="group"
+              aria-label="Solo recording actions"
+            >
+              <button
+                data-testid="solo-cancel-button"
+                onClick={handleSoloCancel}
+                className="bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-lg transition-colors shadow-lg hover:shadow-xl"
+                title="Cancel solo recording"
+                aria-label="Cancel solo recording"
+              >
+                <Icon icon="mdi:close" className="w-6 h-6" aria-hidden="true" />
+              </button>
+              <button
+                data-testid="solo-submit-button"
+                onClick={handleSoloSubmit}
+                className="bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg transition-colors shadow-lg hover:shadow-xl"
+                title="Submit solo recording"
+                aria-label="Submit solo recording"
+              >
+                <Icon icon="mdi:check" className="w-6 h-6" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Normal mode UI
   return (
     <div
       data-testid="recording-control-panel"
@@ -87,16 +228,22 @@ export function RecordingControlPanel({
                     className="w-8 h-8 text-red-500 animate-pulse"
                     aria-hidden="true"
                   />
-                  <div
+                  <button
                     data-testid="user-speaking-indicator"
-                    title={userSpeaking ? 'Speaking' : 'Not speaking'}
+                    title={
+                      userSpeaking
+                        ? 'Speaking - Click to enter solo mode'
+                        : 'Not speaking - Click to enter solo mode'
+                    }
+                    onClick={handleUserIndicatorClick}
+                    className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
                   >
                     <Icon
                       icon="mdi:account-voice"
-                      className={`w-7 h-7 ${userSpeaking ? 'text-blue-600' : 'text-gray-300'}`}
+                      className={`w-7 h-7 ${userSpeaking ? 'text-blue-600' : 'text-gray-300'} hover:scale-110 transition-transform cursor-pointer`}
                       aria-hidden="true"
                     />
-                  </div>
+                  </button>
                 </>
               ) : (
                 <>
@@ -141,16 +288,22 @@ export function RecordingControlPanel({
                     className="w-8 h-8 text-purple-500 animate-pulse"
                     aria-hidden="true"
                   />
-                  <div
+                  <button
                     data-testid="system-audio-indicator"
-                    title={hasSystemAudio ? 'Audio detected' : 'No audio'}
+                    title={
+                      hasSystemAudio
+                        ? 'Audio detected - Click to enter solo mode'
+                        : 'No audio - Click to enter solo mode'
+                    }
+                    onClick={handleSystemIndicatorClick}
+                    className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
                   >
                     <Icon
                       icon="mdi:waveform"
-                      className={`w-7 h-7 ${hasSystemAudio ? 'text-blue-600' : 'text-gray-300'}`}
+                      className={`w-7 h-7 ${hasSystemAudio ? 'text-blue-600' : 'text-gray-300'} hover:scale-110 transition-transform cursor-pointer`}
                       aria-hidden="true"
                     />
-                  </div>
+                  </button>
                 </>
               ) : (
                 <>

@@ -3,6 +3,7 @@ import { AIAvailabilityProvider } from './contexts/AIAvailabilityContext'
 import { AudioCaptureProvider } from './contexts/AudioCaptureContext'
 import { FormalizationProvider } from './contexts/FormalizationContext'
 import { PresentationControlProvider } from './contexts/PresentationControlContext'
+import { SoloRecordingProvider } from './contexts/SoloRecordingContext'
 import { SubjectProvider } from './contexts/SubjectContext'
 import { SystemAudioAnalysisProvider } from './contexts/SystemAudioAnalysisContext'
 import { SystemAudioProvider } from './contexts/SystemAudioContext'
@@ -30,7 +31,9 @@ function App() {
                         <SystemAudioAnalysisProvider>
                           <PresentationControlProvider>
                             <SubjectProvider>
-                              <MainApplication />
+                              <SoloRecordingProvider>
+                                <MainApplication />
+                              </SoloRecordingProvider>
                             </SubjectProvider>
                           </PresentationControlProvider>
                         </SystemAudioAnalysisProvider>

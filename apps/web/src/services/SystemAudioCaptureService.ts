@@ -118,6 +118,20 @@ export class SystemAudioCaptureService implements AudioCaptureService {
     console.log('🛑 System audio capture stopped')
   }
 
+  /**
+   * Get all accumulated chunks and clear the buffer.
+   * Useful for solo recording mode where we want all audio at once.
+   */
+  getAccumulatedChunks(): Blob | null {
+    if (this.chunks.length === 0) {
+      return null
+    }
+
+    const blob = new Blob(this.chunks, { type: 'audio/webm' })
+    this.chunks = []
+    return blob
+  }
+
   private startWaveformAnalysis(): void {
     if (!this.analyser) return
 

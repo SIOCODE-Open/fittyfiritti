@@ -34,6 +34,7 @@ export interface AudioCaptureService {
   startCapture(): Promise<void>
   stopCapture(): void
   completeSegment(): void
+  getAccumulatedChunks(): Blob | null
   onAudioChunk(callback: (chunk: AudioChunk) => void): void
   onWaveformData(callback: (waveformData: number[]) => void): void
   isCapturing: boolean

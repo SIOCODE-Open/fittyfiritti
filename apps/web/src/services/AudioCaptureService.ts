@@ -64,6 +64,20 @@ export class AudioCaptureServiceImpl implements AudioCaptureService {
     console.log('🛑 Audio capture stopped')
   }
 
+  /**
+   * Get all accumulated chunks and clear the buffer.
+   * Useful for solo recording mode where we want all audio at once.
+   */
+  getAccumulatedChunks(): Blob | null {
+    if (this.chunks.length === 0) {
+      return null
+    }
+
+    const blob = new Blob(this.chunks, { type: 'audio/webm' })
+    this.chunks = []
+    return blob
+  }
+
   completeSegment(): void {
     if (!this.isCapturing || !this.mediaRecorder) {
       return
